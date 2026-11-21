@@ -673,7 +673,8 @@ button {
   gap: 6px;
 }
 
-.field > span {
+.field > span,
+.field > label {
   font-size: 14px;
   font-weight: 600;
 }
@@ -2026,6 +2027,23 @@ a.btn-quiet:not(.btn-primary) {
   box-shadow: 0 0 0 3px rgba(253, 188, 7, 0.2);
 }
 
+/* Champ prérempli par le navigateur : Chrome y met un fond bleu clair, illisible sur le thème sombre.
+   Une ombre intérieure pleine reprend la couleur du champ (seul moyen de couvrir ce fond). */
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover {
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  box-shadow: 0 0 0 1000px var(--field-bg, var(--raise)) inset;
+}
+
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  caret-color: var(--ink);
+  box-shadow:
+    0 0 0 1000px var(--field-bg, var(--raise)) inset,
+    0 0 0 3px rgba(253, 188, 7, 0.2);
+}
+
 /* Sur fond jaune, le texte passe au vert foncé du logo. */
 .beat[data-active],
 .beat[data-active] .tok-hold,
@@ -2383,6 +2401,172 @@ a.btn-quiet:not(.btn-primary) {
 
 .auth > * {
   animation: rise 460ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.auth {
+  justify-items: center;
+}
+
+.auth .actions {
+  justify-content: center;
+}
+
+/* ——— Carte du compte (connexion, inscription, compte ouvert) ——— */
+
+.account {
+  width: min(100%, 460px);
+  margin-inline: auto;
+  gap: 22px;
+  padding: 30px 28px 28px;
+}
+
+.account .panel-title {
+  font-size: 30px;
+}
+
+/* Onglet Compte : le panneau qui suit (notifications) s'aligne sur la carte, en une seule colonne. */
+.account ~ .panel {
+  width: min(100%, 460px);
+  margin-inline: auto;
+  padding: 26px 28px;
+}
+
+/* Deux onglets de même largeur ; le repère clair glisse sous celui qui est choisi. */
+.seg-fill {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+}
+
+.seg-fill::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: rgba(238, 245, 242, 0.16);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 300ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+.seg-fill[data-mode="register"]::before {
+  transform: translateX(100%);
+}
+
+.seg-fill .seg-btn {
+  position: relative;
+  min-height: 42px;
+  transition: color 200ms ease;
+}
+
+.seg-fill .seg-btn.is-on {
+  background: none;
+  box-shadow: none;
+}
+
+.account .form {
+  max-width: none;
+  gap: 18px;
+}
+
+.account .field > span,
+.account .field > label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Champs en creux dans la carte : plus sombres qu'elle, pour qu'on voie où écrire. */
+.account .input {
+  --field-bg: var(--paper);
+  min-height: 52px;
+  padding-inline: 16px;
+  border-radius: 12px;
+  background: var(--field-bg);
+}
+
+.field-in {
+  animation: rise 320ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+.field-hint {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Mot de passe : le bouton « œil » est posé dans le champ, à droite. */
+.pw {
+  position: relative;
+}
+
+.pw .input {
+  padding-right: 54px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--muted);
+  transform: translateY(-50%);
+  transition: color 160ms ease;
+}
+
+.pw-toggle:hover,
+.pw-toggle[aria-pressed="true"] {
+  color: var(--ink);
+}
+
+.pw-toggle svg {
+  width: 20px;
+  height: 20px;
+}
+
+.account .form .actions .btn {
+  width: 100%;
+  min-height: 52px;
+  font-size: 16px;
+}
+
+/* Compte ouvert : une pastille à l'initiale, le nom, l'adresse. */
+.account-id {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.account-id > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.account-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.account-mail {
+  overflow-wrap: anywhere;
 }
 
 /* ——— Page d'accueil (mise en page éditoriale : asymétrie, aplats, formes rondes) ——— */

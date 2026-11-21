@@ -37,7 +37,7 @@ export default function Landing() {
               <Link className="btn btn-lg btn-primary" href="/app">
                 Ouvrir l&apos;application
               </Link>
-              <Link className="hm-link" href="/connexion">
+              <Link className="hm-link" href="/connexion?mode=creer">
                 Créer un compte
               </Link>
             </div>

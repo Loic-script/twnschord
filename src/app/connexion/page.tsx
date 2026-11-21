@@ -15,9 +15,12 @@ export default function ConnexionPage() {
   const [online, setOnline] = useState(true);
   /** Dans l'application installée, il n'y a pas de page d'accueil où retourner. */
   const [installed, setInstalled] = useState(false);
+  /** /connexion?mode=creer ouvre directement le formulaire d'inscription. */
+  const [initialMode, setInitialMode] = useState<"login" | "register">("login");
 
   useEffect(() => {
     setInstalled(isInstalled());
+    if (new URLSearchParams(window.location.search).get("mode") === "creer") setInitialMode("register");
     const update = () => setOnline(navigator.onLine);
     update();
     window.addEventListener("online", update);
@@ -36,6 +39,8 @@ export default function ConnexionPage() {
         <img className="brand-logo" src="/logo/twinschord-logo-reverse.svg" alt={APP_NAME} width={1267} height={267} />
       </Link>
       <AccountView
+        key={initialMode}
+        initialMode={initialMode}
         user={user}
         online={online}
         onUser={(next) => {
@@ -44,7 +49,8 @@ export default function ConnexionPage() {
         }}
       />
       <div className="actions">
-        <Link className="btn btn-primary" href="/app">
+        {/* Jaune seulement une fois connecté : avant, c'est le bouton de la carte qui est l'action principale. */}
+        <Link className={user ? "btn btn-primary" : "btn"} href="/app">
           {user ? "Ouvrir l'application" : "Continuer sans compte"}
         </Link>
         {/* « web-only » : masqué dans l'application installée, qui n'a pas de page d'accueil. */}
