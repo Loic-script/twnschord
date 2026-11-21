@@ -483,6 +483,26 @@ export function playNote(
   } else addBlown(out, sr, start, dur, midi, level, id, noise);
 }
 
+/**
+ * Une note seule, prête à être jouée au clavier : elle est calculée une fois,
+ * puis rejouée à volonté. Les sons entretenus (orgue, vents, cordes) durent plus
+ * longtemps que les sons qui s'éteignent d'eux-mêmes (piano, guitare).
+ */
+export function renderNoteSample(id: InstrumentId, midi: number, sr = 44100): Float32Array {
+  const sustained = PROFILES[id].engine === "blown";
+  const seconds = sustained ? 5 : 3.5;
+  const out = new Float32Array(Math.round(seconds * sr));
+  playNote(out, sr, id, 0, seconds - (sustained ? 0.6 : 0.3), midi, 1 / PROFILES[id].level, new Noise(1000 + midi));
+  // Même niveau de crête pour toutes les notes : le clavier sonne égal du grave à l'aigu.
+  let peak = 0;
+  for (let i = 0; i < out.length; i++) peak = Math.max(peak, Math.abs(out[i]));
+  if (peak > 1e-9) {
+    const scale = 0.7 / peak;
+    for (let i = 0; i < out.length; i++) out[i] *= scale;
+  }
+  return out;
+}
+
 // ——— Batterie ———
 
 /** k : grosse caisse, s : caisse claire, h : charleston fermé, o : charleston ouvert, r : cymbale ride, x : cercle. */

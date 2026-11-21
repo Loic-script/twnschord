@@ -23,6 +23,23 @@ export default function AboutView() {
         </ul>
       </div>
 
+      <div className="about-block">
+        <h2 className="label">Confidentialité</h2>
+        <ul className="about-privacy">
+          <li>Le son du micro et les fichiers importés sont analysés sur votre appareil : ils ne sont ni enregistrés ni envoyés.</li>
+          <li>Aucun cookie de publicité ni de mesure d&apos;audience, aucun traceur.</li>
+          <li>
+            Un seul cookie, déposé uniquement si vous vous connectez : il garde votre session ouverte pendant 30 jours et
+            disparaît à la déconnexion.
+          </li>
+          <li>Vos réglages (nom des notes, records du jeu) restent dans la mémoire de votre navigateur.</li>
+          <li>
+            Avec un compte, sont conservés sur le serveur : votre adresse e-mail, votre prénom si vous l&apos;indiquez, votre
+            mot de passe sous forme chiffrée, et les analyses que vous enregistrez — jamais les fichiers audio.
+          </li>
+        </ul>
+      </div>
+
       <p className="about-origin">Fait à {MADE_IN}</p>
     </section>
   );

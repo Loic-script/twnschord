@@ -23,6 +23,7 @@ import { chordsKey, generateMelody, MELODY_BASE, melodyToText, parseMelody, solf
 import { INSTRUMENTS, type InstrumentId } from "@/lib/audio/voices";
 import { Keyboard } from "./Keyboard";
 import { ChordText } from "./NoteText";
+import { Select, type SelectGroup, type SelectOption } from "./Select";
 
 const PRESETS: [string, string][] = [
   ["Pop", "C G Am F"],
@@ -71,17 +72,19 @@ function Volume({ value, onChange, label }: { value: number; onChange: (value: n
   );
 }
 
-function InstrumentOptions() {
-  return (
-    <>
-      {INSTRUMENTS.map(({ id, name }) => (
-        <option key={id} value={id}>
-          {name}
-        </option>
-      ))}
-    </>
-  );
-}
+const INSTRUMENT_OPTIONS: SelectOption<InstrumentId>[] = INSTRUMENTS.map(({ id, name }) => ({ value: id, label: name }));
+
+// Choix d'une piste : les instruments, puis la section rythmique.
+const TRACK_INSTRUMENTS: SelectGroup<TrackInstrument>[] = [
+  { group: "Instruments", options: INSTRUMENT_OPTIONS },
+  {
+    group: "Rythmique",
+    options: [
+      { value: "bass", label: "Guitare basse" },
+      { value: "drums", label: "Batterie" },
+    ],
+  },
+];
 
 interface Session {
   source: AudioBufferSourceNode;
@@ -381,32 +384,22 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
                   <span className="track-num" aria-hidden="true">
                     {n}
                   </span>
-                  <select
-                    className="select"
+                  <Select<TrackInstrument>
                     value={t.instrument}
-                    aria-label={`Instrument de la piste ${n}`}
-                    onChange={(e) => {
-                      const instrument = e.target.value as TrackInstrument;
+                    label={`Instrument de la piste ${n}`}
+                    options={TRACK_INSTRUMENTS}
+                    onChange={(instrument) => {
                       // On garde le type choisi s'il existe aussi pour le nouvel instrument.
                       const keep = stylesFor(instrument) === styles && instrument !== "drums" && instrument !== "bass";
                       patchTrack(t.id, { instrument, style: keep ? t.style : defaultStyle(instrument) });
                     }}
-                  >
-                    <optgroup label="Instruments">
-                      <InstrumentOptions />
-                    </optgroup>
-                    <optgroup label="Rythmique">
-                      <option value="bass">Guitare basse</option>
-                      <option value="drums">Batterie</option>
-                    </optgroup>
-                  </select>
-                  <select className="select" value={t.style} aria-label={`${typeLabel(t.instrument)} de la piste ${n}`} onChange={(e) => patchTrack(t.id, { style: e.target.value })}>
-                    {styles.map((style) => (
-                      <option key={style.id} value={style.id}>
-                        {style.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  <Select
+                    value={t.style}
+                    label={`${typeLabel(t.instrument)} de la piste ${n}`}
+                    options={styles.map((style) => ({ value: style.id, label: style.name }))}
+                    onChange={(style) => patchTrack(t.id, { style })}
+                  />
                   <button type="button" className="btn btn-quiet" onClick={() => setTracks((list) => list.filter((x) => x.id !== t.id))} aria-label={`Retirer la piste ${n}`}>
                     Retirer
                   </button>
@@ -492,9 +485,7 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
 
         {melody.mode !== "none" && (
           <div className="track-controls">
-            <select className="select" value={melody.instrument} aria-label="Instrument de la mélodie" onChange={(e) => patchMelody({ instrument: e.target.value as InstrumentId })}>
-              <InstrumentOptions />
-            </select>
+            <Select<InstrumentId> value={melody.instrument} label="Instrument de la mélodie" options={INSTRUMENT_OPTIONS} onChange={(instrument) => patchMelody({ instrument })} />
             <Stepper value={melody.octave} onChange={(octave) => patchMelody({ octave })} label="Octave de la mélodie" />
             <Volume value={melody.volume} onChange={(volume) => patchMelody({ volume })} label="Volume de la mélodie" />
           </div>

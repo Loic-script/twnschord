@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser, sameOrigin } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { limited } from "@/lib/rateLimit";
 import { parseAnalysis } from "@/lib/validate";
 
 const MAX_BODY = 3_000_000;
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
   try {
     const user = await currentUser();
     if (!user) return fail("Connectez-vous pour enregistrer un morceau.", 401);
+
+    // Pas plus de 30 enregistrements par minute et par compte.
+    if (limited(`save|${user.id}`, 30, 60 * 1000)) return fail("Trop d'enregistrements à la suite. Réessayez dans une minute.", 429);
 
     const text = await request.text();
     if (text.length > MAX_BODY) return fail("Analyse trop volumineuse.", 413);

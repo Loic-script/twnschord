@@ -19,6 +19,10 @@
   --brass-bright: #e9bc62;
   --hammer: #b5343c;
 
+  /* Jaune d'accent, à petite dose : le « Chord » du nom et le repère de l'onglet actif.
+     Il n'est jamais utilisé en texte sur fond clair, où il serait illisible. */
+  --yellow: #f0c230;
+
   --display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
   --body: "Instrument Sans Variable", "Segoe UI", system-ui, sans-serif;
   --mono: "DM Mono", ui-monospace, Consolas, monospace;
@@ -37,6 +41,8 @@ html {
 
 body {
   margin: 0;
+  /* Un écran qui entre en glissant ne doit pas élargir la page le temps de l'animation. */
+  overflow-x: clip;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--body);
@@ -121,9 +127,10 @@ button {
 
 .top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 4px 0 14px;
 }
 
@@ -140,10 +147,22 @@ button {
 }
 
 .brand-name {
+  white-space: nowrap;
   font-family: var(--display);
   font-size: 23px;
   font-weight: 700;
   letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+/* « Chord » : jaune sur une étiquette verte, pour qu'il se lise aussi bien que « Twins ». */
+.brand-accent {
+  display: inline-block;
+  margin-left: 3px;
+  padding: 3px 7px 4px;
+  border-radius: 7px;
+  background: var(--felt);
+  color: var(--yellow);
 }
 
 .top-tools {
@@ -214,18 +233,120 @@ button {
   clip-path: inset(50%);
 }
 
+.tab {
+  position: relative;
+  z-index: 1;
+  transition:
+    color 220ms ease,
+    transform 120ms ease;
+}
+
+.tab:active {
+  transform: scale(0.95);
+}
+
 .tab.is-on {
   color: var(--felt);
+}
+
+/* L'icône de l'onglet choisi « rebondit » une fois. */
+.tab.is-on svg {
+  animation: tab-pop 380ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+@keyframes tab-pop {
+  0% {
+    transform: scale(0.78);
+  }
+  55% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Repère de l'onglet actif : un seul élément, qui glisse d'un onglet à l'autre.
+   Sur téléphone, une pastille avec un trait jaune au-dessus de l'icône… */
+.tabs-indicator {
+  position: absolute;
+  top: 6px;
+  bottom: calc(6px + env(safe-area-inset-bottom));
+  left: 0;
+  width: var(--ind-w, 0);
+  border-radius: 12px;
   background: rgba(15, 59, 51, 0.08);
+  opacity: var(--ind-o, 0);
+  transform: translateX(var(--ind-x, 0));
+  pointer-events: none;
+}
+
+.tabs-indicator::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 20px;
+  height: 3px;
+  margin-left: -10px;
+  border-radius: 2px;
+  background: var(--yellow);
+}
+
+.tabs[data-ready] .tabs-indicator {
+  transition:
+    transform 340ms cubic-bezier(0.3, 0.85, 0.25, 1),
+    width 340ms cubic-bezier(0.3, 0.85, 0.25, 1),
+    opacity 200ms ease;
 }
 
 .main {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* Un écran qui s'ouvre entre en fondu, en glissant depuis le côté où l'on est allé. */
+.view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
+  animation: view-in 300ms cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--dir, 1) * 22px));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @media (max-width: 479px) {
+  /* L'en-tête se resserre pour que le nom tienne sur une ligne à côté du choix des noms de notes. */
+  .brand {
+    gap: 6px;
+  }
+
+  .brand-mark {
+    width: 18px;
+    height: 25px;
+  }
+
+  .brand-name {
+    font-size: 20px;
+  }
+
+  .brand-accent {
+    padding: 2px 5px 3px;
+  }
+
+  .top .seg-btn {
+    padding-inline: 10px;
+  }
+
   /* Sur petit écran, l'état du réseau n'est écrit en toutes lettres que hors ligne. */
   .status[data-online="true"] .status-text {
     display: none;
@@ -238,7 +359,8 @@ button {
   }
 
   .tabs {
-    position: static;
+    position: relative;
+    inset: auto;
     display: flex;
     gap: 4px;
     padding: 0;
@@ -275,9 +397,17 @@ button {
     display: none;
   }
 
-  .tab.is-on {
-    background: none;
-    border-bottom-color: var(--felt);
+  /* … et sur grand écran, un soulignement jaune qui court sous la barre. */
+  .tabs-indicator {
+    top: auto;
+    bottom: -2px;
+    height: 3px;
+    border-radius: 2px 2px 0 0;
+    background: var(--yellow);
+  }
+
+  .tabs-indicator::before {
+    content: none;
   }
 }
 
@@ -380,15 +510,176 @@ button {
   box-shadow: none;
 }
 
-.select {
+/* Liste déroulante de l'application (composant Select). */
+.sel {
+  position: relative;
+  display: inline-flex;
   max-width: 100%;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.sel-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
   min-height: 40px;
-  padding: 6px 12px;
+  padding: 6px 12px 6px 16px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--card);
   font-size: 14px;
   font-weight: 600;
+  text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.sel-btn:hover {
+  border-color: var(--ink);
+}
+
+.sel[data-open] .sel-btn {
+  border-color: var(--felt);
+  box-shadow: 0 0 0 3px rgba(15, 59, 51, 0.14);
+}
+
+.sel-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La flèche, centrée dans sa pastille, pivote quand la liste s'ouvre. */
+.sel-chevron {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border-radius: 50%;
+  background: rgba(18, 33, 29, 0.07);
+  transition:
+    transform 260ms cubic-bezier(0.3, 1.3, 0.5, 1),
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.sel[data-open] .sel-chevron {
+  transform: rotate(180deg);
+  background: var(--felt);
+  color: var(--on-felt);
+}
+
+.sel-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  max-width: min(340px, 88vw);
+  max-height: 292px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow:
+    0 14px 34px rgba(10, 42, 36, 0.2),
+    0 2px 6px rgba(10, 42, 36, 0.08);
+  transform-origin: top center;
+  animation: sel-in 190ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+.sel-list[data-placement="up"] {
+  top: auto;
+  bottom: calc(100% + 6px);
+  transform-origin: bottom center;
+}
+
+.sel-list[data-align="end"] {
+  left: auto;
+  right: 0;
+}
+
+.sel-list[data-state="closing"] {
+  animation: sel-out 110ms ease-in forwards;
+}
+
+@keyframes sel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sel-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+.sel-group {
+  padding: 9px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sel-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 40px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  /* Les options apparaissent l'une après l'autre, très vite. */
+  animation: sel-option-in 220ms ease both;
+  animation-delay: calc(min(var(--i, 0), 8) * 14ms);
+}
+
+@keyframes sel-option-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.sel-option[data-active] {
+  background: rgba(15, 59, 51, 0.08);
+}
+
+.sel-option[aria-selected="true"] {
+  color: var(--felt);
+  font-weight: 700;
+}
+
+.sel-check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+}
+
+.sel-option[aria-selected="true"] .sel-check {
+  opacity: 1;
 }
 
 .field {
@@ -1147,7 +1438,7 @@ button {
   gap: 8px;
 }
 
-.track-head .select {
+.track-head .sel {
   flex: 1 1 150px;
   min-width: 0;
 }
@@ -1272,6 +1563,68 @@ textarea.input {
     grid-template-columns: 190px minmax(0, 1fr);
     align-items: center;
   }
+}
+
+/* ——— Bandeau cookies ———
+   Posé dans la page, au-dessus du contenu : il s'annonce sans rien recouvrir. */
+.cookies {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 18px;
+  padding: 14px 16px 14px 18px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--yellow);
+  border-radius: 14px;
+  background: var(--card);
+  font-size: 14px;
+}
+
+/* Déjà lu lors d'une visite précédente : masqué avant le premier affichage (attribut posé par layout.tsx). */
+html[data-cookies="ok"] .cookies {
+  display: none;
+}
+
+.cookies p {
+  flex: 1 1 320px;
+  max-width: 68ch;
+}
+
+.cookies-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cookies[data-state="leaving"] {
+  animation: cookies-out 220ms ease-in forwards;
+}
+
+@keyframes cookies-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Champ piège de l'anti-spam : invisible et hors d'atteinte pour une personne, rempli par les robots. */
+.hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.about-privacy {
+  display: grid;
+  gap: 8px;
+  padding-left: 18px;
+  list-style: disc;
+  font-size: 15px;
 }
 
 /* ——— Jeu de chant ——— */
@@ -1437,6 +1790,109 @@ textarea.input {
   text-align: center;
 }
 
+/* ——— Piano jouable ——— */
+
+.piano-head {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px 14px;
+}
+
+/* Sur la scène sombre, le bouton de la liste déroulante s'éclaircit légèrement au survol. */
+.stage .sel-btn {
+  border-color: transparent;
+}
+
+.stepper-dark {
+  border-color: var(--felt-line);
+  background: rgba(236, 242, 238, 0.1);
+  color: var(--on-felt);
+}
+
+.stepper-dark button:hover:not(:disabled) {
+  background: rgba(236, 242, 238, 0.16);
+}
+
+.check-dark {
+  color: var(--on-felt);
+}
+
+.check-dark input {
+  accent-color: var(--brass-bright);
+}
+
+.piano-readout {
+  min-height: clamp(120px, 28vw, 170px);
+}
+
+.piano-readout .readout-main {
+  font-size: clamp(56px, 16vw, 104px);
+}
+
+/* Le clavier capte lui-même les doigts : pas de défilement ni de sélection pendant qu'on joue. */
+.piano-keys {
+  display: flex;
+  gap: 3px;
+  height: clamp(190px, 50vw, 270px);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+
+.piano-octave {
+  position: relative;
+  flex: 1;
+  display: flex;
+  gap: 3px;
+}
+
+.pkey-white {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 8px;
+  border-radius: 0 0 9px 9px;
+  background: linear-gradient(to bottom, #d3dcd6 0%, #eef2ef 14%, #f7f9f8 100%);
+  box-shadow: inset 0 -5px 0 rgba(10, 42, 36, 0.12);
+  color: var(--felt);
+  font-family: var(--mono);
+  font-size: 11px;
+  pointer-events: auto;
+}
+
+.pkey-white b {
+  margin-left: 1px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.pkey-white[data-on] {
+  background: var(--brass-bright);
+  box-shadow: inset 0 -2px 0 rgba(10, 42, 36, 0.18);
+}
+
+.pkey-black {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  width: 9%;
+  height: 60%;
+  transform: translateX(-50%);
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(to bottom, #123b33 0%, #06201b 100%);
+  box-shadow:
+    0 0 0 2px var(--felt-deep),
+    inset 0 -6px 0 rgba(236, 242, 238, 0.08);
+}
+
+.pkey-black[data-on] {
+  background: #b8892f;
+  box-shadow: 0 0 0 2px var(--felt-deep);
+}
+
 /* ——— À propos et pied de page ——— */
 
 .about {
@@ -1495,6 +1951,32 @@ textarea.input {
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Sur écran tactile, tout ce qui se touche fait au moins 40 px de haut.
+   (En fin de feuille, pour passer après les tailles par défaut définies plus haut.) */
+@media (max-width: 719px), (pointer: coarse) {
+  .seg-btn {
+    min-height: 40px;
+  }
+
+  .seek {
+    height: 40px;
+  }
+
+  .foot-link {
+    min-height: 40px;
+    padding: 8px 0;
+  }
+
+  .check {
+    min-height: 44px;
+  }
+
+  .check input {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

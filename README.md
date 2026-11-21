@@ -5,7 +5,9 @@ Application web qui reconnaît les notes et les accords, et tire d'un morceau sa
 Créé par **TwinsDev** — Razafimamonjy Faneva Loic et Razafimamonjy Fahendrena Marco. Fait à Madagascar.
 
 - **Micro** — jouez une note ou un accord : l'application affiche « Do », « La♭ »… ou « C », « Am7 », « G7 »…, avec un accordeur et un clavier qui s'éclaire.
-- **Chant** — un jeu d'exercice vocal : des portes marquées d'une note tirée au hasard avancent vers vous ; chantez la note (dans n'importe quelle octave) et tenez-la pour ouvrir la porte. Un repère montre en direct la note que vous faites et s'il faut monter ou descendre. Trois niveaux, trois vies, score et record.
+- **Jeu** — deux activités :
+  - *Chant*, un exercice vocal : des portes marquées d'une note tirée au hasard avancent vers vous ; chantez la note (dans n'importe quelle octave) et tenez-la pour ouvrir la porte. Un repère montre en direct la note que vous faites et s'il faut monter ou descendre. Trois niveaux, trois vies, score et record.
+  - *Piano*, un clavier à jouer au doigt (plusieurs à la fois), à la souris ou au clavier de l'ordinateur, avec dix instruments, déplacement par octave et pédale. Le nom des notes et de l'accord joué s'affiche.
 - **Morceau** — importez un fichier audio, ou une vidéo (MP4, MOV, WebM…) dont seul le son est gardé : tempo, tonalité, mesure, accords temps par temps et mélodie en solfa (d r m, do mobile), en Do Ré Mi ou en C D E. Lancez la lecture et suivez la partition qui défile. Les boutons − / + de tonalité transposent la partition et le son lui-même, jusqu'à 6 demi-tons, sans changer la vitesse.
 - **Générer** — écrivez vos accords (`C G Am F` ou `Do Sol Lam Fa`) et composez un petit groupe : jusqu'à 5 pistes d'accompagnement parmi 10 instruments, une guitare basse et une batterie, chacune avec son type (16 jeux, 10 lignes de basse, 10 rythmes de batterie), son octave et son volume ; plus une mélodie générée d'après les accords ou écrite à la main. L'application fabrique le son, le joue en boucle et permet de le télécharger en WAV. Les instruments sont synthétisés par calcul, pas enregistrés.
 - **Hors ligne** — toute la reconnaissance est calculée sur l'appareil ; rien n'est envoyé. Après une première visite, l'application s'ouvre et fonctionne sans Internet.
@@ -30,6 +32,12 @@ Pour l'usage réel, et pour le mode hors ligne (le service worker n'est actif qu
 npm run build
 npm start
 ```
+
+## Mise en ligne
+
+- **Adresse du site** : définir `NEXT_PUBLIC_SITE_URL` (voir `.env.example`) avec l'adresse publique. Elle est reprise dans `/sitemap.xml` et `/robots.txt`, générés par `src/app/sitemap.ts` et `src/app/robots.ts`. Sans elle, ces fichiers indiquent `http://localhost:3000`.
+- **Cookies** : l'application ne dépose qu'un cookie de session, à la connexion. Le bandeau (`src/components/CookieNotice.tsx`) est donc une information, pas une demande d'accord. Si un outil de mesure d'audience ou de publicité est ajouté un jour, il faudra en faire un vrai choix accepter / refuser avant tout dépôt.
+- **Anti-spam** : la création de compte refuse les formulaires remplis par des robots (champ piège invisible, envoi trop rapide) et limite les essais par connexion (`src/lib/rateLimit.ts`). Ces compteurs sont en mémoire : ils conviennent à un serveur unique.
 
 ## Sur téléphone
 

@@ -9,6 +9,7 @@ import { encodeWav } from "@/lib/audio/synth";
 import { transposeAnalysis } from "@/lib/audio/transpose";
 import type { Track } from "./App";
 import { ChordText } from "./NoteText";
+import { Select } from "./Select";
 import { Sheet, type SheetView } from "./Sheet";
 
 interface Props {
@@ -427,11 +428,16 @@ export default function Player({ track, naming, user, online, onChange, onClose,
           ))}
         </div>
         {view !== "chords" && (
-          <select className="select" value={notation} onChange={(e) => setNotation(e.target.value as Notation)} aria-label="Écriture de la mélodie">
-            <option value="solfa">Solfa (d r m) — do = {doName}</option>
-            <option value="latin">Do Ré Mi</option>
-            <option value="letter">C D E</option>
-          </select>
+          <Select<Notation>
+            value={notation}
+            label="Écriture de la mélodie"
+            onChange={setNotation}
+            options={[
+              { value: "solfa", label: `Solfa (d r m) — do = ${doName}` },
+              { value: "latin", label: "Do Ré Mi" },
+              { value: "letter", label: "C D E" },
+            ]}
+          />
         )}
         <div className="seg" role="group" aria-label="Temps par mesure">
           {[3, 4].map((n) => (
@@ -454,13 +460,12 @@ export default function Player({ track, naming, user, online, onChange, onClose,
         >
           Décaler le 1er temps
         </button>
-        <select className="select" value={rate} onChange={(e) => changeRate(Number(e.target.value))} aria-label="Vitesse de lecture">
-          {RATES.map((r) => (
-            <option key={r} value={r}>
-              {r === 1 ? "Vitesse normale" : `Vitesse ${Math.round(r * 100)} %`}
-            </option>
-          ))}
-        </select>
+        <Select
+          value={String(rate)}
+          label="Vitesse de lecture"
+          onChange={(r) => changeRate(Number(r))}
+          options={RATES.map((r) => ({ value: String(r), label: r === 1 ? "Vitesse normale" : `Vitesse ${Math.round(r * 100)} %` }))}
+        />
       </div>
 
       <Sheet sheet={sheet} view={view} activeBeat={activeBeat} follow={playing} onSeek={seek} />

@@ -16,7 +16,8 @@ import {
   type Track,
 } from "./synth";
 import { chordsKey, generateMelody, melodyToText, parseMelody } from "./tune";
-import { INSTRUMENTS, type InstrumentId } from "./voices";
+import { nameChord } from "./chords";
+import { INSTRUMENTS, renderNoteSample, type InstrumentId } from "./voices";
 
 const chordsOf = (text: string) => parseProgression(text).chords;
 const labels = (text: string) => chordsOf(text).map((c) => c.label);
@@ -86,6 +87,48 @@ describe("justesse de chaque instrument", () => {
       expect(Math.abs(midi - 69) * 100).toBeLessThan(6);
     });
   }
+});
+
+describe("notes du piano jouable", () => {
+  it("chaque instrument donne une note juste, sans écrêtage, au même niveau du grave à l'aigu", () => {
+    for (const { id } of INSTRUMENTS) {
+      for (const midi of [48, 60, 72]) {
+        const sample = renderNoteSample(id, midi, 44100);
+        const { peak, finite } = peakOf(sample);
+        expect(finite).toBe(true);
+        expect(peak).toBeCloseTo(0.7, 3);
+        const measured = pitchAt(sample, 44100);
+        expect(Math.round(measured)).toBe(midi);
+        expect(Math.abs(measured - midi) * 100).toBeLessThan(6);
+      }
+    }
+  });
+
+  it("un son entretenu dure plus longtemps qu'un son qui s'éteint", () => {
+    expect(renderNoteSample("organ", 60).length).toBeGreaterThan(renderNoteSample("piano", 60).length);
+    // Un piano s'éteint de lui-même : la fin de la note est bien plus faible que le début.
+    const piano = renderNoteSample("piano", 60);
+    const loud = (from: number, to: number) => {
+      let sum = 0;
+      for (let i = from; i < to; i++) sum += piano[i] * piano[i];
+      return sum;
+    };
+    expect(loud(100000, 120000)).toBeLessThan(loud(2000, 22000) * 0.2);
+  });
+
+  it("nomme l'accord joué, renversements compris", () => {
+    expect(nameChord([60, 64, 67])).toBe("C");
+    expect(nameChord([57, 60, 64])).toBe("Am");
+    expect(nameChord([55, 59, 62, 65])).toBe("G7");
+    expect(nameChord([48, 60, 64, 67, 72])).toBe("C"); // notes redoublées à l'octave
+    expect(nameChord([64, 67, 72])).toBe("C/E"); // premier renversement
+    expect(nameChord([67, 72, 76])).toBe("C/G");
+    expect(nameChord([60, 67])).toBe("C5");
+    expect(nameChord([60, 65, 67])).toBe("Csus4");
+    expect(nameChord([60])).toBeNull(); // une seule note
+    expect(nameChord([60, 61, 62])).toBeNull(); // pas un accord connu
+    expect(nameChord([])).toBeNull();
+  });
 });
 
 describe("guitare basse", () => {

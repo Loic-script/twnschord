@@ -9,6 +9,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { limited } from "@/lib/rateLimit";
 
 type Context = { params: Promise<{ action: string }> };
 
@@ -16,24 +17,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const fail = (error: string, status: number) => NextResponse.json({ error }, { status });
 const unavailable = () => fail("La base de données ne répond pas. Vérifiez que PostgreSQL est démarré.", 503);
 
-// Frein aux essais de mot de passe en rafale (en mémoire : suffisant pour un seul serveur).
-const attempts = new Map<string, { count: number; reset: number }>();
-const WINDOW_MS = 10 * 60 * 1000;
-const MAX_ATTEMPTS = 10;
-
-function tooManyAttempts(key: string): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || entry.reset < now) {
-    attempts.set(key, { count: 1, reset: now + WINDOW_MS });
-    if (attempts.size > 5000) {
-      for (const [k, v] of attempts) if (v.reset < now) attempts.delete(k);
-    }
-    return false;
-  }
-  entry.count++;
-  return entry.count > MAX_ATTEMPTS;
-}
+// Protection contre les robots et les essais en rafale.
+const TEN_MINUTES = 10 * 60 * 1000;
+const ONE_HOUR = 60 * 60 * 1000;
+/** Essais de connexion ou d'inscription pour une même adresse e-mail, par connexion. */
+const MAX_PER_EMAIL = 10;
+/** Essais toutes adresses confondues, par connexion (contre le balayage d'adresses). */
+const MAX_PER_IP = 40;
+/** Comptes créés par connexion et par heure. */
+const MAX_REGISTRATIONS = 10;
+/** Une personne met plus de temps que cela à remplir le formulaire d'inscription. */
+const MIN_FORM_MS = 800;
 
 // Haché factice : la vérification prend le même temps que le compte existe ou non.
 let dummyHash: Promise<string> | null = null;
@@ -66,13 +60,23 @@ export async function POST(request: Request, context: Context) {
     if (!EMAIL_RE.test(email) || email.length > 254) return fail("Adresse e-mail invalide.", 400);
 
     const ip = (request.headers.get("x-forwarded-for") ?? "local").split(",")[0].trim();
-    if (tooManyAttempts(`${ip}|${email}`)) {
+    if (limited(`auth-ip|${ip}`, MAX_PER_IP, TEN_MINUTES) || limited(`auth|${ip}|${email}`, MAX_PER_EMAIL, TEN_MINUTES)) {
       return fail("Trop de tentatives. Réessayez dans quelques minutes.", 429);
     }
 
     if (action === "register") {
+      // Deux pièges à robots : un champ invisible qu'une personne ne remplit jamais,
+      // et un formulaire envoyé plus vite qu'on ne peut le remplir à la main.
+      const trap = typeof body?.website === "string" ? body.website : "";
+      const elapsed = typeof body?.elapsed === "number" ? body.elapsed : 0;
+      if (trap !== "" || elapsed < MIN_FORM_MS) {
+        return fail("Inscription refusée : le formulaire semble avoir été rempli automatiquement. Rechargez la page et réessayez.", 400);
+      }
       if (password.length < 8) return fail("Le mot de passe doit compter au moins 8 caractères.", 400);
       if (password.length > 200) return fail("Mot de passe trop long (200 caractères au maximum).", 400);
+      if (limited(`register|${ip}`, MAX_REGISTRATIONS, ONE_HOUR)) {
+        return fail("Trop de comptes créés depuis cette connexion. Réessayez dans une heure.", 429);
+      }
       const rows = await query<{ id: string }>(
         `INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3)
          ON CONFLICT (email) DO NOTHING RETURNING id::text AS id`,

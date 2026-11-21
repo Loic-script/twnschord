@@ -107,6 +107,27 @@ export function bestChord(scores: Float32Array): number {
   return best;
 }
 
+let named: ChordDef[] | null = null;
+
+/**
+ * Nom de l'accord que forment exactement ces notes (MIDI), ou null si elles
+ * n'en forment pas un connu. La note la plus grave désigne la fondamentale ;
+ * si c'est une autre note de l'accord, il est écrit renversé : « C/E ».
+ */
+export function nameChord(midis: number[]): string | null {
+  const classes = [...new Set(midis.map((m) => ((m % 12) + 12) % 12))];
+  if (classes.length < 2) return null;
+  named ??= buildChords(["maj", "min", "dom7", "maj7", "min7", "dim", "aug", "sus4", "sus2", "five"]);
+  const bass = ((Math.min(...midis) % 12) + 12) % 12;
+  let inverted: ChordDef | null = null;
+  for (const def of named) {
+    if (def.tones.length !== classes.length || !def.tones.every((tone) => classes.includes(tone))) continue;
+    if (def.root === bass) return def.label;
+    inverted ??= def;
+  }
+  return inverted ? `${inverted.label}/${LETTER_NAMES[bass]}` : null;
+}
+
 const ROOT_RE = /^([A-G][♯♭]?)(.*)$/;
 
 /** Classes de hauteur d'un accord à partir de son nom ("Am7" → [9, 0, 4, 7]). */

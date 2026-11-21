@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api, type User } from "@/lib/api";
 
 interface Props {
@@ -16,13 +16,24 @@ export default function AccountView({ user, online, onUser }: Props) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Anti-spam : un champ piège que seuls les robots remplissent, et l'heure d'affichage du formulaire.
+  const [website, setWebsite] = useState("");
+  const shownAt = useRef(0);
+
+  useEffect(() => {
+    shownAt.current = Date.now();
+  }, [mode]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      onUser(mode === "login" ? await api.login(email, password) : await api.register(email, password, name));
+      onUser(
+        mode === "login"
+          ? await api.login(email, password)
+          : await api.register(email, password, name, { website, elapsed: Date.now() - shownAt.current }),
+      );
       setPassword("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "La connexion a échoué.");
@@ -85,6 +96,14 @@ export default function AccountView({ user, online, onUser }: Props) {
       {!online && <p className="note">Hors ligne : la connexion au compte demande Internet.</p>}
 
       <form className="form" onSubmit={submit}>
+        {mode === "register" && (
+          <div className="hp" aria-hidden="true">
+            <label>
+              Ne remplissez pas ce champ
+              <input name="website" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />
+            </label>
+          </div>
+        )}
         {mode === "register" && (
           <label className="field">
             <span>Prénom (facultatif)</span>
