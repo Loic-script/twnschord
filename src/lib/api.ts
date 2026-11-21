@@ -43,8 +43,12 @@ export const api = {
     call<{ user: User }>("/api/auth/login", "POST", { email, password }).then((r) => r.user),
   logout: () => call<{ ok: true }>("/api/auth/logout", "POST", {}),
   listAnalyses: () => call<{ analyses: SavedSummary[] }>("/api/analyses").then((r) => r.analyses),
-  saveAnalysis: (title: string, analysis: Analysis) =>
-    call<{ analysis: SavedSummary }>("/api/analyses", "POST", { title, analysis }).then((r) => r.analysis),
+  /**
+   * `pushEndpoint` : l'abonnement aux notifications de cet appareil, s'il en a un. Le serveur prévient
+   * les autres appareils du compte, pas celui qui vient d'enregistrer.
+   */
+  saveAnalysis: (title: string, analysis: Analysis, pushEndpoint?: string | null) =>
+    call<{ analysis: SavedSummary }>("/api/analyses", "POST", { title, analysis, pushEndpoint: pushEndpoint ?? undefined }).then((r) => r.analysis),
   getAnalysis: (id: string) =>
     call<{ id: string; title: string; analysis: Analysis }>(`/api/analyses/${encodeURIComponent(id)}`),
   deleteAnalysis: (id: string) => call<{ ok: true }>(`/api/analyses/${encodeURIComponent(id)}`, "DELETE"),

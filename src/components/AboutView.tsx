@@ -3,6 +3,7 @@ import { APP_NAME, MADE_IN, TEAM_MEMBERS, TEAM_NAME } from "@/lib/app";
 export default function AboutView() {
   return (
     <section className="panel about">
+      <img className="about-logo" src="/logo/twinschord-mark-reverse.svg" alt="" width={449} height={267} />
       <h1 className="panel-title">À propos de {APP_NAME}</h1>
       <p>
         {APP_NAME} reconnaît les notes et les accords au micro, et tire d&apos;un morceau sa grille d&apos;accords et son
@@ -33,6 +34,12 @@ export default function AboutView() {
             disparaît à la déconnexion.
           </li>
           <li>Vos réglages (nom des notes, records du jeu) restent dans la mémoire de votre navigateur.</li>
+          <li>
+            Si vous activez les notifications, le serveur garde l&apos;adresse technique de votre appareil pour pouvoir lui
+            écrire. Chaque message est chiffré pour votre appareil seul : le service qui le transporte (celui de votre
+            navigateur — Google, Mozilla, Apple ou Microsoft) ne peut pas le lire. Désactiver les notifications efface
+            cette adresse.
+          </li>
           <li>
             Avec un compte, sont conservés sur le serveur : votre adresse e-mail, votre prénom si vous l&apos;indiquez, votre
             mot de passe sous forme chiffrée, et les analyses que vous enregistrez — jamais les fichiers audio.

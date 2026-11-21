@@ -18,15 +18,23 @@ export const metadata: Metadata = {
   applicationName: APP_NAME,
   creator: TEAM_NAME,
   authors: TEAM_MEMBERS.map((name) => ({ name })),
+  // Aperçu du lien quand il est partagé ; l'image vient de src/app/opengraph-image.png.
+  openGraph: { type: "website", locale: "fr_FR", siteName: APP_NAME, title: `${APP_NAME} — notes, accords et solfa`, url: "/" },
+  twitter: { card: "summary_large_image" },
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: APP_NAME, statusBarStyle: "black-translucent" },
 };
 
-// Même clé que dans src/components/CookieNotice.tsx.
-const COOKIES_SEEN_SCRIPT = `try{if(localStorage.getItem("twinschord.cookies")==="ok")document.documentElement.setAttribute("data-cookies","ok")}catch(e){}`;
+// Exécuté avant le premier affichage, pour que rien n'apparaisse puis disparaisse :
+// 1. bandeau cookies déjà lu (même clé que dans src/components/CookieNotice.tsx) → masqué d'emblée ;
+// 2. application installée (même test que isInstalled() dans src/lib/installedApp.ts) → l'attribut
+//    data-installed adapte les styles, et la page d'accueil du site cède la place à l'application.
+const BOOT_SCRIPT =
+  `try{if(localStorage.getItem("twinschord.cookies")==="ok")document.documentElement.setAttribute("data-cookies","ok")}catch(e){}` +
+  `try{var m=window.matchMedia;if(navigator.standalone===true||m("(display-mode: standalone)").matches||m("(display-mode: window-controls-overlay)").matches){document.documentElement.setAttribute("data-installed","");if(location.pathname==="/")location.replace("/app")}}catch(e){}`;
 
 export const viewport: Viewport = {
-  themeColor: "#0F3B33",
+  themeColor: "#031A19",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
@@ -34,12 +42,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    // suppressHydrationWarning : le script ci-dessous peut ajouter un attribut à <html> avant que React ne démarre.
+    // suppressHydrationWarning : le script ci-dessous peut ajouter des attributs à <html> avant que React ne démarre.
     <html lang="fr" suppressHydrationWarning>
       <head>
-        {/* Exécuté avant le premier affichage : si le bandeau cookies a déjà été lu, il est masqué d'emblée,
-            sans apparaître puis disparaître. */}
-        <script dangerouslySetInnerHTML={{ __html: COOKIES_SEEN_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
       </head>
       <body>{children}</body>
     </html>

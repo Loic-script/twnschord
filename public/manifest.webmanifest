@@ -3,15 +3,87 @@
   "short_name": "TwinsChord",
   "description": "Reconnaît les notes et les accords au micro, analyse un morceau et en tire la grille d'accords et le solfa. Fonctionne hors ligne.",
   "lang": "fr",
-  "start_url": "/",
+  "dir": "ltr",
+  "id": "/app",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#EEF2EF",
-  "theme_color": "#0F3B33",
+  "background_color": "#031A19",
+  "theme_color": "#031A19",
+  "categories": ["music", "education", "utilities"],
+  "prefer_related_applications": false,
+  "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "screenshots": [
+    {
+      "src": "/captures/ordinateur.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Générer : écrire une suite d'accords et l'écouter"
+    },
+    {
+      "src": "/captures/telephone.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Micro : la note ou l'accord joué s'affiche"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Micro — reconnaître une note ou un accord",
+      "short_name": "Micro",
+      "url": "/app?onglet=live",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Morceau — analyser un fichier",
+      "short_name": "Morceau",
+      "url": "/app?onglet=file",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Générer — jouer une suite d'accords",
+      "short_name": "Générer",
+      "url": "/app?onglet=generate",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Jeu — chant et piano",
+      "short_name": "Jeu",
+      "url": "/app?onglet=game",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/app?onglet=file",
+      "accept": {
+        "audio/mpeg": [".mp3"],
+        "audio/wav": [".wav"],
+        "audio/mp4": [".m4a"],
+        "audio/ogg": [".ogg", ".oga", ".opus"],
+        "audio/flac": [".flac"],
+        "audio/aac": [".aac"],
+        "video/mp4": [".mp4", ".m4v"],
+        "video/quicktime": [".mov"],
+        "video/webm": [".webm"]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "/app/recevoir",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [{ "name": "fichier", "accept": ["audio/*", "video/*"] }]
+    }
+  }
 }

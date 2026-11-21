@@ -9,7 +9,10 @@
     "start": "next start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "db:init": "node scripts/init-db.mjs"
+    "db:init": "node scripts/init-db.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "push:init": "node scripts/init-push.mjs",
+    "notify": "node scripts/notify.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
@@ -18,13 +21,16 @@
     "next": "^16.4.6",
     "pg": "^8.23.1",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "web-push": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/pg": "^8.23.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/web-push": "^3.6.4",
+    "sharp": "^0.35.5",
     "typescript": "^5.9.3",
     "vitest": "^5.1.1"
   }

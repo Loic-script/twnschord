@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { currentUser, sameOrigin } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { notifyUser } from "@/lib/push";
+import { isPushEndpoint } from "@/lib/pushRules";
 import { limited } from "@/lib/rateLimit";
 import { parseAnalysis } from "@/lib/validate";
 
@@ -80,7 +82,18 @@ export async function POST(request: Request) {
        RETURNING id::text AS id, title, duration, tempo, key_tonic, key_mode, created_at`,
       [user.id, title, analysis.duration, analysis.tempo, analysis.key.tonic, analysis.key.mode, JSON.stringify(analysis)],
     );
-    return NextResponse.json({ analysis: summary(rows[0]) }, { status: 201 });
+    // Les autres appareils du compte sont prévenus, une fois la réponse partie
+    // (l'enregistrement n'attend pas les services de notification).
+    const saved = rows[0];
+    const origin = isPushEndpoint(body?.pushEndpoint) ? body.pushEndpoint : undefined;
+    after(() =>
+      notifyUser(
+        user.id,
+        { title: "Nouveau morceau enregistré", body: `« ${saved.title} » est dans votre bibliothèque.`, url: `/app?morceau=${saved.id}`, tag: `morceau-${saved.id}` },
+        origin,
+      ).catch((err) => console.error("[push]", err)),
+    );
+    return NextResponse.json({ analysis: summary(saved) }, { status: 201 });
   } catch (err) {
     console.error("[analyses]", err);
     return fail("La base de données ne répond pas.", 503);

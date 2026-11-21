@@ -16,7 +16,14 @@ export const COOKIES_KEY = "twinschord.cookies";
  * arrivant après coup ; pour qui l'a déjà lu, un court script placé dans
  * `layout.tsx` le masque avant même que la page ne soit dessinée.
  */
-export default function CookieNotice({ onLearnMore }: { onLearnMore: () => void }) {
+interface Props {
+  /** Dans l'application : ouvre l'écran « À propos ». */
+  onLearnMore?: () => void;
+  /** Hors de l'application (page d'accueil) : adresse où lire les explications. */
+  learnMoreHref?: string;
+}
+
+export default function CookieNotice({ onLearnMore, learnMoreHref }: Props) {
   const [state, setState] = useState<"shown" | "leaving" | "hidden">("shown");
 
   useEffect(() => {
@@ -59,7 +66,8 @@ export default function CookieNotice({ onLearnMore }: { onLearnMore: () => void 
           className="btn btn-quiet"
           onClick={() => {
             dismiss();
-            onLearnMore();
+            if (onLearnMore) onLearnMore();
+            else if (learnMoreHref) window.location.assign(learnMoreHref);
           }}
         >
           En savoir plus

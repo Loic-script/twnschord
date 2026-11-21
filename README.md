@@ -33,11 +33,40 @@ npm run build
 npm start
 ```
 
+## Logo
+
+Le logo d'origine est dans `design/logo-original.png`. Il a été vectorisé une fois ; les tracés qui en résultent sont la référence :
+
+| Fichier (`public/logo/`) | Usage |
+| --- | --- |
+| `twinschord-logo.svg` | Logo complet, pour fond clair (en-tête de l'application) |
+| `twinschord-logo-reverse.svg` | Logo complet, pour fond sombre |
+| `twinschord-logo-mono-dark.svg`, `-mono-white.svg` | Une seule couleur (tampon, gravure, filigrane) |
+| `twinschord-mark*.svg` | Monogramme « TC » seul, mêmes variantes |
+| `twinschord-wordmark*.svg` | Nom seul, mêmes variantes |
+| `png/` | Les mêmes en PNG : logo en 600, 1200 et 2400 px, monogramme en 256, 512 et 1024 px, photos de profil carrées |
+| `planche-logo.png` | Toutes les variantes côte à côte |
+| `couleurs.json` | Vert `#033b39` et jaune `#fdbc07`, relevés sur le logo et repris par l'interface |
+
+`npm run icons` régénère tout ce qui en dérive : icônes d'installation (`public/icons/`), icône d'onglet (`src/app/favicon.ico`), icône iPhone, pictogramme de notification, image de partage (`src/app/opengraph-image.png`) et le dossier `png/`.
+
 ## Mise en ligne
 
 - **Adresse du site** : définir `NEXT_PUBLIC_SITE_URL` (voir `.env.example`) avec l'adresse publique. Elle est reprise dans `/sitemap.xml` et `/robots.txt`, générés par `src/app/sitemap.ts` et `src/app/robots.ts`. Sans elle, ces fichiers indiquent `http://localhost:3000`.
 - **Cookies** : l'application ne dépose qu'un cookie de session, à la connexion. Le bandeau (`src/components/CookieNotice.tsx`) est donc une information, pas une demande d'accord. Si un outil de mesure d'audience ou de publicité est ajouté un jour, il faudra en faire un vrai choix accepter / refuser avant tout dépôt.
 - **Anti-spam** : la création de compte refuse les formulaires remplis par des robots (champ piège invisible, envoi trop rapide) et limite les essais par connexion (`src/lib/rateLimit.ts`). Ces compteurs sont en mémoire : ils conviennent à un serveur unique.
+
+## Notifications push
+
+L'application envoie de vraies notifications système (standard Web Push), reçues même application fermée, et cliquables.
+
+- **Mise en place** : `npm run push:init` génère les clés d'envoi dans `.env.local` (à faire une fois ; à reporter telles quelles sur l'hébergement, sans jamais les publier), et `npm run db:init` crée la table des abonnements. Remplacer `VAPID_SUBJECT` par une vraie adresse de contact.
+- **Côté utilisateur** : onglet Compte → « Activer les notifications », puis « Envoyer une notification d'essai ».
+- **Ce qui déclenche une notification** : un morceau enregistré dans la bibliothèque (les autres appareils du compte sont prévenus ; le clic ouvre ce morceau), et les annonces envoyées à tous les abonnés avec
+  `npm run notify -- "Titre" "Message" "/?onglet=game"` (la troisième valeur, facultative, est l'écran ouvert au clic).
+- **Ajouter un événement** : appeler `notifyUser(idDuCompte, { title, body, url })` depuis une route (`src/lib/push.ts`).
+- **Conditions** : https obligatoire (ou `localhost`) ; sur iPhone et iPad, l'application doit d'abord être ajoutée à l'écran d'accueil ; pas de notifications en navigation privée ; sur ordinateur, le navigateur doit être lancé (même en arrière-plan). Le son et la vibration sont ceux que l'appareil réserve aux notifications.
+- **Confidentialité** : chaque message est chiffré pour l'appareil destinataire ; le service de notification qui le transporte ne peut pas le lire. Le serveur n'écrit qu'aux services de notification des navigateurs (`src/lib/pushRules.ts`).
 
 ## Sur téléphone
 
@@ -46,6 +75,20 @@ Ouvrir `http://192.168.x.x:3000` depuis le téléphone affichera donc l'applicat
 
 - **Hébergement en https** (recommandé) : déployer l'application sur un serveur avec un certificat, puis l'ouvrir sur le téléphone et choisir « Ajouter à l'écran d'accueil » pour l'installer.
 - **Essai sur le réseau local** : `npm run dev:https` sert l'application en https avec un certificat auto-signé (le téléphone affichera un avertissement à accepter).
+
+## Application installée
+
+Installée (Android, Windows, iPhone, Mac), TwinsChord se comporte en logiciel et non en site :
+
+- **Pas de page d'accueil** : l'icône ouvre directement l'application (`/app`). La racine `/` et tout lien interne vers elle y renvoient (script de `src/app/layout.tsx`, `src/components/InstalledGate.tsx`). Dans un navigateur, l'accueil reste inchangé.
+- **Hors ligne** : l'application, ses polices et le moteur d'analyse sont gardés sur l'appareil ; micro, jeu, analyse d'un morceau et générateur marchent sans réseau. Seuls le compte et la bibliothèque demandent Internet.
+- **Mises à jour** : une nouvelle version se télécharge en arrière-plan, puis un bandeau « Mise à jour prête — Redémarrer » s'affiche (`src/components/UpdateNotice.tsx`). Sans clic, elle s'applique à la prochaine ouverture. Pour publier une version : changer `CACHE` dans `public/sw.js`.
+- **Raccourcis** : clic droit sur l'icône (Windows, Mac) ou appui long (Android) → Micro, Morceau, Générer, Jeu.
+- **« Ouvrir avec TwinsChord »** (ordinateur, Chrome ou Edge) : un fichier audio ou vidéo ouvert depuis l'explorateur part directement à l'analyse.
+- **« Partager → TwinsChord »** (Android) : un audio reçu dans une autre application peut être envoyé à TwinsChord ; il reste sur l'appareil (`public/sw.js`, adresse `/app/recevoir`).
+- **Fenêtre unique** : relancer l'application ramène la fenêtre déjà ouverte.
+
+Tout cela est déclaré dans `public/manifest.webmanifest`. L'installation exige une adresse `https` (ou `localhost`). Les captures montrées dans la fenêtre d'installation sont dans `public/captures/`.
 
 ## Commandes
 

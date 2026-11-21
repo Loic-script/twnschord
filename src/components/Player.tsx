@@ -7,6 +7,7 @@ import { keyLabel, pcName, type NoteNaming } from "@/lib/audio/notes";
 import { buildSheet, type Meter, type Notation } from "@/lib/audio/solfa";
 import { encodeWav } from "@/lib/audio/synth";
 import { transposeAnalysis } from "@/lib/audio/transpose";
+import { pushEndpoint } from "@/lib/pushClient";
 import type { Track } from "./App";
 import { ChordText } from "./NoteText";
 import { Select } from "./Select";
@@ -255,7 +256,7 @@ export default function Player({ track, naming, user, online, onChange, onClose,
     setSaving(true);
     setSaveError(null);
     try {
-      const saved = await api.saveAnalysis(title.trim() || "Sans titre", { ...analysis, ...meter });
+      const saved = await api.saveAnalysis(title.trim() || "Sans titre", { ...analysis, ...meter }, await pushEndpoint());
       onChange({ ...track, title: saved.title, savedId: saved.id });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "L'enregistrement a échoué.");

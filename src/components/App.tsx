@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { api, type User } from "@/lib/api";
-import { APP_NAME, APP_NAME_PARTS, TEAM_NAME } from "@/lib/app";
+import { APP_NAME, TEAM_NAME } from "@/lib/app";
 import { prewarmAnalysis } from "@/lib/audio/analyzeClient";
 import type { NoteNaming } from "@/lib/audio/notes";
 import type { Analysis } from "@/lib/audio/types";
+import { keepOfflineFiles, onLaunchFile, takeSharedFile } from "@/lib/installedApp";
+import { syncPush } from "@/lib/pushClient";
+import { readTarget } from "@/lib/pushRules";
 import AboutView from "./AboutView";
 import AccountView from "./AccountView";
 import CookieNotice from "./CookieNotice";
@@ -14,6 +17,8 @@ import GameView from "./GameView";
 import GenerateView from "./GenerateView";
 import LibraryView from "./LibraryView";
 import LiveView from "./LiveView";
+import NotificationSettings from "./NotificationSettings";
+import UpdateNotice from "./UpdateNotice";
 
 export interface Track {
   /** Identifiant local : change à chaque morceau ouvert. */
@@ -54,8 +59,9 @@ function setUpOffline(): void {
     return;
   }
   if (process.env.NODE_ENV !== "production") {
-    void navigator.serviceWorker.getRegistrations().then((list) => list.forEach((r) => r.unregister()));
-    if ("caches" in window) void caches.keys().then((keys) => keys.forEach((key) => caches.delete(key)));
+    // En développement, le service worker est chargé en mode « sans cache » (il servirait des fichiers
+    // périmés à chaque modification du code) : il reste présent pour recevoir les notifications.
+    navigator.serviceWorker.register("/sw.js?dev").catch(() => {});
     prewarmAnalysis();
     return;
   }
@@ -71,6 +77,7 @@ function setUpOffline(): void {
     };
     report();
     prewarmAnalysis();
+    keepOfflineFiles();
     setTimeout(report, 4000);
   });
 }
@@ -81,6 +88,8 @@ export default function App() {
   const [online, setOnline] = useState(true);
   const [naming, setNaming] = useState<NoteNaming>("latin");
   const [track, setTrack] = useState<Track | null>(null);
+  /** Fichier remis par le système (« Ouvrir avec », « Partager ») et pas encore analysé. */
+  const [incoming, setIncoming] = useState<File | null>(null);
   /** Sens du dernier changement d'onglet : 1 vers la droite, −1 vers la gauche. */
   const [direction, setDirection] = useState(1);
   const nav = useRef<HTMLElement>(null);
@@ -132,12 +141,15 @@ export default function App() {
   }, []);
 
   // La session est relue au démarrage et à chaque retour de la connexion.
+  const [sessionKnown, setSessionKnown] = useState(false);
   useEffect(() => {
     if (!online) return;
     let cancelled = false;
     api.me().then(
       (u) => {
-        if (!cancelled) setUser(u);
+        if (cancelled) return;
+        setUser(u);
+        setSessionKnown(true);
       },
       () => {},
     );
@@ -145,6 +157,58 @@ export default function App() {
       cancelled = true;
     };
   }, [online]);
+
+  // Notifications : l'abonnement de cet appareil suit le compte (rattaché à la connexion, détaché à la déconnexion).
+  const userId = user?.id ?? null;
+  useEffect(() => {
+    if (sessionKnown) void syncPush();
+  }, [sessionKnown, userId]);
+
+  // Ouvre ce que désigne l'adresse d'une notification : un morceau de la bibliothèque, ou un onglet.
+  const openTarget = useCallback(async (href: string) => {
+    const target = readTarget(href, window.location.origin);
+    if (target.kind === "tab") {
+      if (target.tab === "about" || TABS.some((t) => t.id === target.tab)) setTab(target.tab as Tab);
+    } else if (target.kind === "piece") {
+      try {
+        const saved = await api.getAnalysis(target.id);
+        setTrack((previous) => {
+          if (previous?.audioUrl) URL.revokeObjectURL(previous.audioUrl);
+          return { id: Date.now(), title: saved.title, analysis: saved.analysis, audioUrl: null, savedId: saved.id };
+        });
+        setTab("file");
+      } catch {
+        // Pas connecté, ou morceau supprimé entre-temps : la bibliothèque dira quoi faire.
+        setTab("library");
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Un fichier audio ou vidéo ouvert avec l'application depuis l'ordinateur : il part à l'analyse.
+    onLaunchFile((file) => {
+      setIncoming(file);
+      setTab("file");
+    });
+    // Application ouverte par une notification, un raccourci ou un partage : l'adresse dit quoi montrer.
+    if (window.location.search) {
+      // « Partager → TwinsChord » sur téléphone : le service worker a mis le fichier de côté.
+      if (new URLSearchParams(window.location.search).has("recu")) {
+        void takeSharedFile().then((file) => {
+          if (file) setIncoming(file);
+        });
+      }
+      void openTarget(window.location.href);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    // Application déjà ouverte : le service worker transmet la demande.
+    if (!("serviceWorker" in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "open" && typeof event.data.url === "string") void openTarget(event.data.url);
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [openTarget]);
 
   const chooseNaming = (next: NoteNaming) => {
     setNaming(next);
@@ -165,15 +229,9 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <div className="brand">
-          <svg className="brand-mark" viewBox="0 0 22 30" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 2.5v11a5 5 0 0 0 10 0v-11M11 18.5v9" />
-          </svg>
-          <span className="brand-name">
-            {APP_NAME_PARTS[0]}
-            <span className="brand-accent">{APP_NAME_PARTS[1]}</span>
-          </span>
-        </div>
+        {/* Le logo (version pour fond sombre) est une image vectorielle ; ses dimensions sont données pour qu'il ne décale rien en se chargeant. */}
+        <img className="brand-logo" src="/logo/twinschord-logo-reverse.svg" alt={APP_NAME} width={1267} height={267} />
+
         <div className="top-tools">
           <div className="seg" role="group" aria-label="Nom des notes">
             <button type="button" className={`seg-btn ${naming === "latin" ? "is-on" : ""}`} aria-pressed={naming === "latin"} onClick={() => chooseNaming("latin")}>
@@ -212,6 +270,7 @@ export default function App() {
         ))}
       </nav>
 
+      <UpdateNotice />
       <CookieNotice onLearnMore={() => goTo("about")} />
 
       <main className="main">
@@ -220,7 +279,16 @@ export default function App() {
           {tab === "live" && <LiveView naming={naming} />}
           {tab === "game" && <GameView naming={naming} />}
           {tab === "file" && (
-            <FileView track={track} naming={naming} user={user} online={online} onTrack={openTrack} onGoAccount={() => goTo("account")} />
+            <FileView
+              track={track}
+              naming={naming}
+              user={user}
+              online={online}
+              incoming={incoming}
+              onIncomingTaken={() => setIncoming(null)}
+              onTrack={openTrack}
+              onGoAccount={() => goTo("account")}
+            />
           )}
           {tab === "generate" && <GenerateView naming={naming} />}
           {tab === "library" && (
@@ -236,7 +304,12 @@ export default function App() {
               onGoFile={() => goTo("file")}
             />
           )}
-          {tab === "account" && <AccountView user={user} online={online} onUser={setUser} />}
+          {tab === "account" && (
+            <>
+              <AccountView user={user} online={online} onUser={setUser} />
+              <NotificationSettings online={online} signedIn={user !== null} />
+            </>
+          )}
           {tab === "about" && <AboutView />}
         </div>
       </main>

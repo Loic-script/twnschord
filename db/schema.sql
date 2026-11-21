@@ -28,3 +28,15 @@ CREATE TABLE IF NOT EXISTS analyses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS analyses_user_created_idx ON analyses (user_id, created_at DESC);
+
+-- Appareils abonnés aux notifications push. Un appareil peut s'abonner sans compte
+-- (il reçoit les annonces) ; rattaché à un compte, il reçoit aussi ce qui concerne ce compte.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint     TEXT PRIMARY KEY,               -- adresse de l'appareil chez son service de notification
+  p256dh       TEXT NOT NULL,                  -- clé publique de l'appareil : le message est chiffré pour lui seul
+  auth         TEXT NOT NULL,                  -- secret d'authentification de l'abonnement
+  user_id      BIGINT REFERENCES users (id) ON DELETE SET NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_used_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id);

@@ -9,6 +9,7 @@ export default function NotFound() {
     <div className="app">
       <main className="main">
         <section className="panel">
+          <img className="brand-logo" src="/logo/twinschord-logo-reverse.svg" alt={APP_NAME} width={1267} height={267} />
           <h1 className="panel-title">Cette page n&apos;existe pas</h1>
           <p>
             L&apos;adresse demandée ne mène nulle part. {APP_NAME} tient en une seule page : le micro, le jeu, l&apos;analyse

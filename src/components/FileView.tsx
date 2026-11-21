@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { User } from "@/lib/api";
 import { decodeToMono, runAnalysis } from "@/lib/audio/analyzeClient";
 import type { NoteNaming } from "@/lib/audio/notes";
@@ -17,13 +17,17 @@ interface Props {
   naming: NoteNaming;
   user: User | null;
   online: boolean;
+  /** Fichier remis par le système (« Ouvrir avec », « Partager ») : analysé dès son arrivée. */
+  incoming: File | null;
+  onIncomingTaken: () => void;
   onTrack: (track: Track | null) => void;
   onGoAccount: () => void;
 }
 
-export default function FileView({ track, naming, user, online, onTrack, onGoAccount }: Props) {
+export default function FileView({ track, naming, user, online, incoming, onIncomingTaken, onTrack, onGoAccount }: Props) {
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [drag, setDrag] = useState(false);
+  const taken = useRef<File | null>(null);
 
   const analyze = async (file: File | undefined) => {
     if (!file) return;
@@ -45,6 +49,16 @@ export default function FileView({ track, naming, user, online, onTrack, onGoAcc
       setPhase({ kind: "error", message: err instanceof Error ? err.message : "L'analyse a échoué." });
     }
   };
+
+  // Un fichier arrivé de l'extérieur est traité comme un fichier choisi ici — une seule fois.
+  useEffect(() => {
+    if (!incoming || taken.current === incoming) return;
+    taken.current = incoming;
+    onIncomingTaken();
+    void analyze(incoming);
+    // `analyze` et `onIncomingTaken` sont recréés à chaque rendu : seul l'arrivée d'un fichier doit relancer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming]);
 
   if (phase.kind === "working") {
     const percent = phase.fraction === null ? null : Math.round(phase.fraction * 100);
