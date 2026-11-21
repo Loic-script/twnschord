@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LiveAnalyzer, type LiveChord, type LiveNote } from "@/lib/audio/live";
 import { midiLabel, pcName, pitchClass, type NoteNaming } from "@/lib/audio/notes";
+import { openMic } from "@/lib/mic";
 import { Keyboard } from "./Keyboard";
 import { ChordText, NoteText } from "./NoteText";
 
@@ -26,16 +27,6 @@ interface Session {
   ctx: AudioContext;
   stream: MediaStream;
   raf: number;
-}
-
-function micError(err: unknown): string {
-  const name = err instanceof DOMException ? err.name : "";
-  if (name === "NotAllowedError" || name === "SecurityError") {
-    return "Le micro est bloqué pour ce site. Autorisez-le dans les réglages du navigateur, puis réessayez.";
-  }
-  if (name === "NotFoundError") return "Aucun micro détecté sur cet appareil.";
-  if (name === "NotReadableError") return "Le micro est déjà utilisé par une autre application.";
-  return "Le micro n'a pas pu démarrer. Réessayez.";
 }
 
 export default function LiveView({ naming }: { naming: NoteNaming }) {
@@ -64,22 +55,9 @@ export default function LiveView({ naming }: { naming: NoteNaming }) {
 
   const start = async () => {
     setError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError("Le micro n'est accessible que sur une connexion sécurisée : ouvrez l'application en https ou sur localhost.");
-      return;
-    }
     setStarting(true);
     try {
-      // Les traitements « voix » du navigateur déforment les notes : on les coupe.
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-      });
-      const ctx = new AudioContext();
-      await ctx.resume();
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 8192;
-      ctx.createMediaStreamSource(stream).connect(analyser);
-
+      const { ctx, analyser, stream } = await openMic();
       const live = new LiveAnalyzer(ctx.sampleRate, analyser.fftSize);
       const buffer = new Float32Array(analyser.fftSize);
       const s: Session = { ctx, stream, raf: 0 };
@@ -142,7 +120,7 @@ export default function LiveView({ naming }: { naming: NoteNaming }) {
       s.raf = requestAnimationFrame(tick);
       setListening(true);
     } catch (err) {
-      setError(micError(err));
+      setError(err instanceof Error ? err.message : "Le micro n'a pas pu démarrer. Réessayez.");
     } finally {
       setStarting(false);
     }

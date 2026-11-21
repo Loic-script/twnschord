@@ -178,8 +178,8 @@ button {
   z-index: 10;
   inset: auto 0 0 0;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  padding: 6px 2px calc(6px + env(safe-area-inset-bottom));
   background: var(--card);
   border-top: 1px solid var(--line);
 }
@@ -203,6 +203,15 @@ button {
 .tab svg {
   width: 22px;
   height: 22px;
+}
+
+/* Sur téléphone, les libellés longs cèdent la place à leur version courte. */
+.tab-long {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .tab.is-on {
@@ -252,6 +261,18 @@ button {
   .tab svg {
     width: 18px;
     height: 18px;
+  }
+
+  .tab-long {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+
+  .tab-short {
+    display: none;
   }
 
   .tab.is-on {
@@ -1251,6 +1272,169 @@ textarea.input {
     grid-template-columns: 190px minmax(0, 1fr);
     align-items: center;
   }
+}
+
+/* ——— Jeu de chant ——— */
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 13px;
+  color: var(--on-felt-muted);
+}
+
+.hud b {
+  margin-left: 4px;
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--on-felt);
+}
+
+.lives {
+  display: flex;
+  gap: 6px;
+}
+
+.lives i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--on-felt-muted);
+}
+
+.lives i[data-on] {
+  border-color: var(--hammer);
+  background: var(--hammer);
+}
+
+/* Le couloir : la porte grandit à mesure qu'elle approche ; la suivante attend au fond. */
+.lane {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: clamp(250px, 68vw, 380px);
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    radial-gradient(60% 55% at 50% 50%, rgba(236, 242, 238, 0.14), transparent 70%),
+    linear-gradient(to bottom, var(--felt-deep), #07201b);
+}
+
+.lane .readout-idle {
+  padding: 0 16px;
+  text-align: center;
+}
+
+.door {
+  --s: 0.3;
+  --hold: 0;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: min(58%, 300px);
+  height: 94%;
+  overflow: hidden;
+  border-radius: 12px 12px 4px 4px;
+  background: linear-gradient(160deg, #f3d696 0%, #dcae54 55%, #b98a32 100%);
+  box-shadow:
+    inset 0 0 0 5px rgba(10, 42, 36, 0.14),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+  color: var(--felt-deep);
+  transform: translate(-50%, -50%) scale(var(--s));
+  will-change: transform;
+}
+
+.door[data-hit] {
+  box-shadow:
+    inset 0 0 0 5px rgba(10, 42, 36, 0.14),
+    0 0 0 6px var(--on-felt),
+    0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* La tenue de la bonne note remplit la porte par le bas. */
+.door-fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: calc(var(--hold) * 100%);
+  background: rgba(15, 59, 51, 0.3);
+}
+
+.door-name {
+  position: relative;
+  font-family: var(--display);
+  font-size: clamp(64px, 20vw, 120px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* La porte suivante attend au fond, décalée sur le côté pour rester visible. */
+.door-next {
+  --s: 0.26;
+  left: 80%;
+  top: 30%;
+  opacity: 0.6;
+  font-family: var(--display);
+  font-size: clamp(64px, 20vw, 120px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+}
+
+.lane-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  animation: lane-flash 450ms ease-out;
+}
+
+.lane-flash[data-kind="open"] {
+  background: var(--brass-bright);
+}
+
+.lane-flash[data-kind="crash"] {
+  background: var(--hammer);
+}
+
+@keyframes lane-flash {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.lane-over {
+  display: grid;
+  gap: 6px;
+  padding: 0 16px;
+  text-align: center;
+  color: var(--on-felt-muted);
+}
+
+.lane-over-title {
+  font-family: var(--display);
+  font-size: clamp(30px, 8vw, 44px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--on-felt);
+}
+
+.lane-over-record {
+  color: var(--brass-bright);
+  font-weight: 600;
+}
+
+.sing .tuner-mid {
+  text-align: center;
 }
 
 /* ——— À propos et pied de page ——— */

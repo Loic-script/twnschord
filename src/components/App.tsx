@@ -12,6 +12,7 @@ import FileView from "./FileView";
 import GenerateView from "./GenerateView";
 import LibraryView from "./LibraryView";
 import LiveView from "./LiveView";
+import SingView from "./SingView";
 
 export interface Track {
   /** Identifiant local : change à chaque morceau ouvert. */
@@ -25,13 +26,15 @@ export interface Track {
 }
 
 // « about » n'a pas d'onglet : on y accède par le lien en pied de page.
-type Tab = "live" | "file" | "generate" | "library" | "account" | "about";
+type Tab = "live" | "sing" | "file" | "generate" | "library" | "account" | "about";
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
+// `short` : libellé de remplacement quand la barre d'onglets est à l'étroit (téléphone).
+const TABS: { id: Tab; label: string; short?: string; icon: string }[] = [
   { id: "live", label: "Micro", icon: "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" },
+  { id: "sing", label: "Chant", icon: "M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4" },
   { id: "file", label: "Morceau", icon: "M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z" },
   { id: "generate", label: "Générer", icon: "M4 5h16v14H4zM8 5v8h2.7V5M13.3 5v8H16V5M9.35 13v6M14.65 13v6" },
-  { id: "library", label: "Bibliothèque", icon: "M5 4v16M10 4v16M14.5 5.5l4 14.5M3 20h18" },
+  { id: "library", label: "Bibliothèque", short: "Biblio", icon: "M5 4v16M10 4v16M14.5 5.5l4 14.5M3 20h18" },
   { id: "account", label: "Compte", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4.5 20.5a7.5 7.5 0 0 1 15 0" },
 ];
 
@@ -152,13 +155,23 @@ export default function App() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d={t.icon} />
             </svg>
-            <span>{t.label}</span>
+            {t.short ? (
+              <>
+                <span className="tab-long">{t.label}</span>
+                <span className="tab-short" aria-hidden="true">
+                  {t.short}
+                </span>
+              </>
+            ) : (
+              <span>{t.label}</span>
+            )}
           </button>
         ))}
       </nav>
 
       <main className="main">
         {tab === "live" && <LiveView naming={naming} />}
+        {tab === "sing" && <SingView naming={naming} />}
         {tab === "file" && (
           <FileView track={track} naming={naming} user={user} online={online} onTrack={openTrack} onGoAccount={() => setTab("account")} />
         )}

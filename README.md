@@ -5,6 +5,7 @@ Application web qui reconnaît les notes et les accords, et tire d'un morceau sa
 Créé par **TwinsDev** — Razafimamonjy Faneva Loic et Razafimamonjy Fahendrena Marco. Fait à Madagascar.
 
 - **Micro** — jouez une note ou un accord : l'application affiche « Do », « La♭ »… ou « C », « Am7 », « G7 »…, avec un accordeur et un clavier qui s'éclaire.
+- **Chant** — un jeu d'exercice vocal : des portes marquées d'une note tirée au hasard avancent vers vous ; chantez la note (dans n'importe quelle octave) et tenez-la pour ouvrir la porte. Un repère montre en direct la note que vous faites et s'il faut monter ou descendre. Trois niveaux, trois vies, score et record.
 - **Morceau** — importez un fichier audio, ou une vidéo (MP4, MOV, WebM…) dont seul le son est gardé : tempo, tonalité, mesure, accords temps par temps et mélodie en solfa (d r m, do mobile), en Do Ré Mi ou en C D E. Lancez la lecture et suivez la partition qui défile. Les boutons − / + de tonalité transposent la partition et le son lui-même, jusqu'à 6 demi-tons, sans changer la vitesse.
 - **Générer** — écrivez vos accords (`C G Am F` ou `Do Sol Lam Fa`) et composez un petit groupe : jusqu'à 5 pistes d'accompagnement parmi 10 instruments, une guitare basse et une batterie, chacune avec son type (16 jeux, 10 lignes de basse, 10 rythmes de batterie), son octave et son volume ; plus une mélodie générée d'après les accords ou écrite à la main. L'application fabrique le son, le joue en boucle et permet de le télécharger en WAV. Les instruments sont synthétisés par calcul, pas enregistrés.
 - **Hors ligne** — toute la reconnaissance est calculée sur l'appareil ; rien n'est envoyé. Après une première visite, l'application s'ouvre et fonctionne sans Internet.
@@ -64,6 +65,7 @@ Tout le moteur est dans `src/lib/audio/`, en TypeScript pur, sans bibliothèque 
 | `melody.ts` | Mélodie par sommation d'harmoniques, ramenée sur la grille rythmique |
 | `analyze.ts` | Chaîne complète pour un fichier (exécutée dans un Web Worker) |
 | `solfa.ts` | Mise en mesures et écriture en solfa |
+| `singGame.ts` | Règles du jeu de chant (tirage des notes, portes, vies, score), sans interface ni micro |
 | `pitchShift.ts` | Changement de tonalité d'un enregistrement (vocodeur de phase), sans changer sa durée |
 | `transpose.ts` | Relecture d'une analyse dans une autre tonalité (accords, mélodie) |
 | `synth.ts` | Onglet Générer : lecture des accords saisis et assemblage des pistes en un son |
