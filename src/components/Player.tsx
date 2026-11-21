@@ -68,6 +68,8 @@ export default function Player({ track, naming, user, online, onChange, onClose,
 
   // — Tonalité : la partition est relue dans la tonalité choisie, et le son est transposé à part.
   const [transpose, setTranspose] = useState(0);
+  // La tonalité peut ne changer que les notes écrites, ou les notes et le son.
+  const [shiftSound, setShiftSound] = useState(true);
   const [shifted, setShifted] = useState<{ semitones: number; url: string } | null>(null);
   const [shiftProgress, setShiftProgress] = useState<number | null>(null);
   const [shiftError, setShiftError] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export default function Player({ track, naming, user, online, onChange, onClose,
   const shown = useMemo(() => transposeAnalysis(analysis, transpose), [analysis, transpose]);
   const sheet = useMemo(() => buildSheet(shown, notation, meter), [shown, notation, meter]);
   const activeBeat = useMemo(() => findBeat(analysis.beats, time), [analysis.beats, time]);
-  const audioSrc = transpose !== 0 && shifted ? shifted.url : track.audioUrl;
+  const audioSrc = shiftSound && transpose !== 0 && shifted ? shifted.url : track.audioUrl;
 
   const rememberPlayback = () => {
     const audio = audioRef.current;
@@ -89,8 +91,8 @@ export default function Player({ track, naming, user, online, onChange, onClose,
   const changeKey = (next: number) => {
     const value = Math.max(-MAX_TRANSPOSE, Math.min(MAX_TRANSPOSE, next));
     if (value === 0 && shifted) {
-      // Retour au fichier d'origine : immédiat.
-      rememberPlayback();
+      // Retour au fichier d'origine : immédiat. (En « notes seulement », c'est déjà lui qui joue.)
+      if (shiftSound) rememberPlayback();
       URL.revokeObjectURL(shifted.url);
       shiftedRef.current = null;
       setShifted(null);
@@ -98,9 +100,26 @@ export default function Player({ track, naming, user, online, onChange, onClose,
     setTranspose(value);
   };
 
+  const changeShiftSound = (next: boolean) => {
+    if (next === shiftSound) return;
+    if (shifted) {
+      if (!next || shifted.semitones === transpose) {
+        // Le fichier lu change tout de suite (retour à l'original, ou version transposée déjà prête).
+        rememberPlayback();
+      } else {
+        // La version gardée en mémoire est dans une autre tonalité : on l'oublie, le son d'origine
+        // continue le temps de calculer la bonne.
+        URL.revokeObjectURL(shifted.url);
+        shiftedRef.current = null;
+        setShifted(null);
+      }
+    }
+    setShiftSound(next);
+  };
+
   useEffect(() => {
     const url = track.audioUrl;
-    if (!url || transpose === 0) {
+    if (!url || transpose === 0 || !shiftSound) {
       setShiftProgress(null);
       setShiftError(null);
       return;
@@ -135,7 +154,7 @@ export default function Player({ track, naming, user, online, onChange, onClose,
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [transpose, track.audioUrl]);
+  }, [transpose, shiftSound, track.audioUrl]);
 
   useEffect(
     () => () => {
@@ -329,6 +348,16 @@ export default function Player({ track, naming, user, online, onChange, onClose,
             +
           </button>
         </div>
+        {hasAudio && (
+          <div className="seg" role="group" aria-label="Ce que la tonalité change">
+            <button type="button" className={`seg-btn ${shiftSound ? "is-on" : ""}`} aria-pressed={shiftSound} onClick={() => changeShiftSound(true)}>
+              Notes et son
+            </button>
+            <button type="button" className={`seg-btn ${!shiftSound ? "is-on" : ""}`} aria-pressed={!shiftSound} onClick={() => changeShiftSound(false)}>
+              Notes seulement
+            </button>
+          </div>
+        )}
         {transpose !== 0 && (
           <>
             <span className="note">{semitonesText(transpose)}</span>
@@ -343,6 +372,7 @@ export default function Player({ track, naming, user, online, onChange, onClose,
           </span>
         )}
         {transpose !== 0 && !hasAudio && <span className="note">Sans fichier audio, seule la partition change.</span>}
+        {transpose !== 0 && hasAudio && !shiftSound && <span className="note">Le son reste dans sa tonalité d&apos;origine.</span>}
       </div>
       {shiftError && (
         <p className="alert" role="alert">
