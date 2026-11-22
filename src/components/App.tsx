@@ -230,9 +230,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="top">
+      {/* data-online : sur téléphone, hors ligne, le logo complet cède la place au monogramme pour que
+          l'état du réseau tienne sur la même ligne (voir globals.css, « En-tête de l'application »). */}
+      <header className="top" data-online={online}>
         {/* Le logo (version pour fond sombre) est une image vectorielle ; ses dimensions sont données pour qu'il ne décale rien en se chargeant. */}
-        <img className="brand-logo" src="/logo/twinschord-logo-reverse.svg" alt={APP_NAME} width={1267} height={267} />
+        <img className="brand-logo top-logo-full" src="/logo/twinschord-logo-reverse.svg" alt={APP_NAME} width={1267} height={267} />
+        {/* Monogramme seul, pour les écrans étroits ; sans texte, pour que le nom ne soit pas lu deux fois. */}
+        <img className="brand-logo top-logo-mark" src="/logo/twinschord-mark-reverse.svg" alt="" width={449} height={267} />
 
         <div className="top-tools">
           <div className="seg" role="group" aria-label="Nom des notes">

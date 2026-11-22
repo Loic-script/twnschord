@@ -47,6 +47,10 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* Filet de sécurité : sur téléphone, un élément qui dépasserait d'un seul pixel élargirait toute la
+     page, et le navigateur rétrécirait alors l'affichage pour la faire tenir (bande vide à droite,
+     contenu décentré). « clip » coupe ce débordement sans gêner l'en-tête collant. */
+  overflow-x: clip;
 }
 
 body {
@@ -326,18 +330,10 @@ button {
 }
 
 @media (max-width: 479px) {
-  /* L'en-tête se resserre pour que le logo tienne sur une ligne à côté du choix des noms de notes. */
+  /* Logo des pages de connexion et d'erreur ; celui de l'application est réglé avec son en-tête
+     (« En-tête de l'application », plus bas). */
   .brand-logo {
     height: 30px;
-  }
-
-  .top .seg-btn {
-    padding-inline: 10px;
-  }
-
-  /* Sur petit écran, l'état du réseau n'est écrit en toutes lettres que hors ligne. */
-  .status[data-online="true"] .status-text {
-    display: none;
   }
 }
 
@@ -3813,10 +3809,6 @@ html.piano-open body {
     backdrop-filter: blur(16px);
   }
 
-  .top .brand-logo {
-    height: 30px;
-  }
-
   .main {
     display: flex;
     flex: 1;
@@ -3982,6 +3974,75 @@ html.piano-open body {
   /* Pas de pied de page dans une application : « À propos » est dans l'onglet Compte. */
   .foot {
     display: none;
+  }
+}
+
+/* ——— En-tête de l'application ———
+   Le monogramme seul ne sert qu'aux écrans étroits, hors ligne (voir plus bas). */
+.top-logo-mark {
+  display: none;
+}
+
+/* Téléphone : logo, choix Do Ré Mi / C D E et état du réseau doivent tenir sur une ligne dès 320 px
+   de large, en ligne comme hors ligne. Une ligne trop longue élargirait toute la page. */
+@media (max-width: 479px) {
+  .top {
+    gap: 10px;
+  }
+
+  .top .brand-logo {
+    flex: none;
+    height: 26px;
+  }
+
+  .top-tools {
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .top .seg-btn {
+    padding-inline: 9px;
+    font-size: 13px;
+  }
+
+  /* En ligne : un point vert suffit (le texte reste lu par les lecteurs d'écran). */
+  .status[data-online="true"] .status-text {
+    display: inline;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Hors ligne : une pastille ambre « Hors ligne », bien visible. */
+  .status[data-online="false"] {
+    gap: 6px;
+    padding: 5px 9px 5px 8px;
+    border-radius: 999px;
+    background: rgba(253, 196, 50, 0.14);
+    color: var(--brass-bright);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status[data-online="false"] .status-dot {
+    width: 6px;
+    height: 6px;
+    box-shadow: none;
+  }
+}
+
+/* Téléphone étroit et hors ligne : le monogramme remplace le logo complet pour laisser la place à
+   la pastille « Hors ligne ». */
+@media (max-width: 419px) {
+  .top[data-online="false"] .top-logo-full {
+    display: none;
+  }
+
+  .top[data-online="false"] .top-logo-mark {
+    display: block;
   }
 }
 
