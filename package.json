@@ -12,7 +12,8 @@
     "db:init": "node scripts/init-db.mjs",
     "icons": "node scripts/make-icons.mjs",
     "push:init": "node scripts/init-push.mjs",
-    "notify": "node scripts/notify.mjs"
+    "notify": "node scripts/notify.mjs",
+    "seo:indexnow": "node scripts/indexnow.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

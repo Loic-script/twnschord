@@ -127,15 +127,3 @@ export function nameChord(midis: number[]): string | null {
   }
   return inverted ? `${inverted.label}/${LETTER_NAMES[bass]}` : null;
 }
-
-const ROOT_RE = /^([A-G][♯♭]?)(.*)$/;
-
-/** Classes de hauteur d'un accord à partir de son nom ("Am7" → [9, 0, 4, 7]). */
-export function chordTones(label: string): number[] {
-  const m = ROOT_RE.exec(label);
-  if (!m) return [];
-  const root = LETTER_NAMES.indexOf(m[1]);
-  if (root < 0) return [];
-  const q = Object.values(QUALITIES).find((x) => x.suffix === m[2] && x.id !== "note");
-  return (q ? q.intervals : [0]).map((iv) => (root + iv) % 12);
-}

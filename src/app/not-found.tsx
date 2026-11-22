@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { APP_NAME } from "@/lib/app";
 
-export const metadata = { title: `Page introuvable — ${APP_NAME}` };
+export const metadata = { title: { absolute: `Page introuvable — ${APP_NAME}` }, robots: { index: false, follow: true } };
 
 /** Affichée pour toute adresse qui n'existe pas. */
 export default function NotFound() {

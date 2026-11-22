@@ -12,7 +12,7 @@ import { readTarget } from "@/lib/pushRules";
 import AboutView from "./AboutView";
 import AccountView from "./AccountView";
 import CookieNotice from "./CookieNotice";
-import FileView from "./FileView";
+import FileView, { type FilePhase } from "./FileView";
 import GameView from "./GameView";
 import GenerateView from "./GenerateView";
 import LibraryView from "./LibraryView";
@@ -90,6 +90,8 @@ export default function App() {
   const [track, setTrack] = useState<Track | null>(null);
   /** Fichier remis par le système (« Ouvrir avec », « Partager ») et pas encore analysé. */
   const [incoming, setIncoming] = useState<File | null>(null);
+  /** Avancement de l'analyse d'un fichier : gardé ici pour qu'elle se poursuive, visible au retour, si l'on change d'onglet. */
+  const [filePhase, setFilePhase] = useState<FilePhase>({ kind: "idle" });
   /** Sens du dernier changement d'onglet : 1 vers la droite, −1 vers la gauche. */
   const [direction, setDirection] = useState(1);
   const nav = useRef<HTMLElement>(null);
@@ -280,6 +282,8 @@ export default function App() {
           {tab === "game" && <GameView naming={naming} />}
           {tab === "file" && (
             <FileView
+              phase={filePhase}
+              onPhase={setFilePhase}
               track={track}
               naming={naming}
               user={user}
@@ -308,6 +312,16 @@ export default function App() {
             <>
               <AccountView user={user} online={online} onUser={setUser} />
               <NotificationSettings online={online} signedIn={user !== null} />
+              {/* Sur téléphone, le pied de page disparaît : « À propos » se trouve ici, comme dans les réglages d'une application. */}
+              <button type="button" className="row-link only-phone" onClick={() => goTo("about")}>
+                <span>
+                  <strong>À propos de {APP_NAME}</strong>
+                  <small>Équipe, confidentialité</small>
+                </span>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 3l5 5-5 5" />
+                </svg>
+              </button>
             </>
           )}
           {tab === "about" && <AboutView />}

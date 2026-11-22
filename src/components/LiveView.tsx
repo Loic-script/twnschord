@@ -51,13 +51,26 @@ export default function LiveView({ naming }: { naming: NoteNaming }) {
   }, []);
 
   // Le micro est coupé dès qu'on quitte cet écran.
-  useEffect(() => stop, [stop]);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      stop();
+    };
+  }, [stop]);
 
   const start = async () => {
     setError(null);
     setStarting(true);
     try {
       const { ctx, analyser, stream } = await openMic();
+      // Écran quitté pendant la demande d'autorisation : le micro qui vient de s'ouvrir est refermé aussitôt.
+      if (!alive.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        void ctx.close();
+        return;
+      }
       const live = new LiveAnalyzer(ctx.sampleRate, analyser.fftSize);
       const buffer = new Float32Array(analyser.fftSize);
       const s: Session = { ctx, stream, raf: 0 };

@@ -31,9 +31,11 @@
   --accent-hover: #ffcf3f;
   --on-accent: #06302e;
 
-  --display: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
-  --body: "Instrument Sans Variable", "Segoe UI", system-ui, sans-serif;
-  --mono: "DM Mono", ui-monospace, Consolas, monospace;
+  /* --font-display, --font-body et --font-mono viennent de layout.tsx (next/font) : chacune contient
+     la police et sa police de secours ajustée aux mêmes proportions. */
+  --display: var(--font-display), "Segoe UI", system-ui, sans-serif;
+  --body: var(--font-body), "Segoe UI", system-ui, sans-serif;
+  --mono: var(--font-mono), ui-monospace, Consolas, monospace;
   --symbols: "Segoe UI Symbol", "Apple Symbols", "Noto Sans Symbols 2", "Noto Music", sans-serif;
 }
 
@@ -1823,14 +1825,6 @@ html[data-cookies="ok"] .cookies {
   background: rgba(236, 242, 238, 0.16);
 }
 
-.check-dark {
-  color: var(--on-felt);
-}
-
-.check-dark input {
-  accent-color: var(--brass-bright);
-}
-
 .piano-readout {
   min-height: clamp(120px, 28vw, 170px);
 }
@@ -2152,174 +2146,10 @@ a.btn-quiet:not(.btn-primary) {
   margin-bottom: 0;
 }
 
-.lp {
-  display: grid;
-  gap: 30px;
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 20px 18px 56px;
-}
-
-.lp-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.lp-main {
-  display: grid;
-  gap: 38px;
-}
-
-.lp-hero {
-  position: relative;
-  display: grid;
-  gap: 22px;
-  overflow: hidden;
-  padding: clamp(28px, 6vw, 60px);
-  border: 1px solid rgba(238, 245, 242, 0.14);
-  border-radius: 30px;
-  background:
-    radial-gradient(60% 80% at 15% 0%, rgba(34, 168, 150, 0.6), transparent 70%),
-    radial-gradient(50% 70% at 100% 100%, rgba(253, 188, 7, 0.2), transparent 70%),
-    linear-gradient(150deg, #0b5f59 0%, var(--felt) 52%, #021f1e 100%);
-  background-size: 160% 160%, 150% 150%, 100% 100%;
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
-  animation:
-    rise 600ms cubic-bezier(0.2, 0.75, 0.25, 1) both,
-    stage-drift 16s ease-in-out infinite alternate;
-}
-
-.lp-hero > :not(.lp-bars) {
-  position: relative;
-}
-
-.lp-title {
-  max-width: 15ch;
-  font-family: var(--display);
-  font-size: clamp(38px, 8vw, 76px);
-  font-weight: 700;
-  letter-spacing: -0.045em;
-  line-height: 0.98;
-}
-
-.lp-title em {
-  font-style: normal;
-  color: var(--accent);
-}
-
-.lp-lead {
-  max-width: 54ch;
-  font-size: clamp(16px, 2.2vw, 19px);
-  color: var(--on-felt-muted);
-}
-
-.lp-small {
-  max-width: 60ch;
-  font-size: 14px;
-  color: var(--on-felt-muted);
-}
-
-.lp-cta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-/* Les barres du logo, animées comme un égaliseur, en décor du bandeau. */
-.lp-bars {
-  position: absolute;
-  right: clamp(12px, 5vw, 56px);
-  bottom: 0;
-  display: flex;
-  align-items: flex-end;
-  gap: clamp(5px, 1vw, 10px);
-  height: 62%;
-  opacity: 0.32;
-}
-
-.lp-bars i {
-  width: clamp(10px, 1.6vw, 18px);
-  height: 30%;
-  border-radius: 10px 10px 0 0;
-  background: linear-gradient(to bottom, var(--accent), rgba(253, 188, 7, 0.1));
-  transform-origin: bottom;
-  animation: lp-bar 1.5s ease-in-out infinite alternate;
-  animation-delay: calc(var(--i) * -0.27s);
-}
-
-@keyframes lp-bar {
-  from {
-    height: 16%;
-  }
-  to {
-    height: 100%;
-  }
-}
-
-.lp-section {
-  display: grid;
-  gap: 16px;
-}
-
-.lp-h2 {
-  font-family: var(--display);
-  font-size: clamp(24px, 4vw, 32px);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-}
-
-.lp-grid,
 .lp-dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;
-}
-
-.lp-card {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.012)), var(--card);
-  color: inherit;
-  text-decoration: none;
-  transition:
-    transform 240ms cubic-bezier(0.2, 0.8, 0.25, 1),
-    border-color 200ms ease,
-    box-shadow 240ms ease;
-  animation: rise 520ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
-  animation-delay: calc(120ms + var(--i) * 70ms);
-}
-
-.lp-card:hover {
-  transform: translateY(-5px);
-  border-color: rgba(253, 188, 7, 0.55);
-  box-shadow:
-    0 20px 44px rgba(0, 0, 0, 0.45),
-    0 0 34px rgba(253, 188, 7, 0.12);
-}
-
-.lp-card svg {
-  width: 32px;
-  height: 32px;
-  color: var(--accent);
-}
-
-.lp-card h3 {
-  margin: 4px 0 0;
-  font-family: var(--display);
-  font-size: 21px;
-  letter-spacing: -0.02em;
-}
-
-.lp-card p {
-  font-size: 15px;
-  color: var(--muted);
 }
 
 .lp-dl-btn {
@@ -2577,36 +2407,542 @@ a.btn-quiet:not(.btn-primary) {
   padding-inline: 22px;
 }
 
-.hm-top {
+/* Le logo de l'en-tête ramène à l'accueil. */
+.hd-brand {
+  display: block;
+  flex: none;
+}
+
+/* ——— En-tête de la page d'accueil ———
+   Il reste en haut de l'écran. Tout en haut de la page il est nu ; dès qu'on défile (data-scrolled),
+   il se resserre en barre flottante translucide. */
+
+.hd {
+  position: sticky;
+  z-index: 30;
+  top: 0;
+  padding: 12px 16px 0;
+  /* La bande transparente autour de la barre ne doit pas intercepter les clics. */
+  pointer-events: none;
+}
+
+.hd-bar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding-block: 22px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 10px 6px;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  pointer-events: auto;
+  transition:
+    max-width 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    padding 420ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 320ms ease,
+    border-color 320ms ease,
+    box-shadow 420ms ease;
+  /* « backwards » et non « both » : une fois jouée, l'animation ne laisse aucune trace — sinon elle
+     ferait de l'élément le repère de positionnement de ce qu'il contient (le menu, sur téléphone). */
+  animation: hd-in 760ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
 }
 
-.hm-nav {
+.hd[data-scrolled] .hd-bar {
+  max-width: 940px;
+  padding: 8px 10px 8px 20px;
+  border-color: var(--line-strong);
+  background: rgba(6, 34, 32, 0.78);
+  -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+@keyframes hd-in {
+  from {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+}
+
+.hd .brand-logo {
+  height: 36px;
+  transition: height 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hd[data-scrolled] .brand-logo {
+  height: 30px;
+}
+
+.hd-logo-mark {
+  display: none;
+}
+
+.hd-nav {
+  position: relative;
   display: flex;
-  gap: 22px;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Chaque élément de la barre arrive l'un après l'autre. */
+.hd-nav > :not(.hd-pill) {
+  animation: hd-item 620ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
+.hd-nav > :nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.hd-nav > :nth-child(3) {
+  animation-delay: 240ms;
+}
+
+.hd-nav > :nth-child(4) {
+  animation-delay: 320ms;
+}
+
+@keyframes hd-item {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Pastille qui glisse sous l'élément survolé (position donnée par LandingHeader.tsx). */
+.hd-pill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--pill-w, 0);
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(238, 245, 242, 0.1);
+  opacity: var(--pill-o, 0);
+  transform: translate(var(--pill-x, 0), -50%);
+  pointer-events: none;
+  transition:
+    transform 380ms cubic-bezier(0.3, 1.2, 0.3, 1),
+    width 380ms cubic-bezier(0.3, 1.2, 0.3, 1),
+    opacity 220ms ease;
+}
+
+.hd-link {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
   font-size: 15px;
   font-weight: 600;
-}
-
-.hm-nav a {
+  text-decoration: none;
   white-space: nowrap;
 }
 
-.hm-nav a,
-.hm-foot a {
+/* « Se connecter » : bouton discret, parcouru d'un reflet au survol ; il passe au jaune une fois
+   la page défilée, quand le grand bouton du haut n'est plus à l'écran. */
+.hd-cta {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin-left: 6px;
+  padding: 8px 18px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(238, 245, 242, 0.06);
   color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 160ms ease;
+  white-space: nowrap;
+  transition:
+    background-color 320ms ease,
+    border-color 320ms ease,
+    color 320ms ease,
+    transform 160ms ease,
+    box-shadow 320ms ease;
 }
 
-.hm-nav a:hover,
-.hm-foot a:hover {
-  border-bottom-color: var(--accent);
+.hd-cta::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+
+.hd-cta:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.hd-cta:hover::after {
+  transform: translateX(120%);
+  transition: transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hd-cta:active {
+  transform: scale(0.97);
+}
+
+.hd[data-scrolled] .hd-cta {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 8px 22px rgba(253, 188, 7, 0.24);
+}
+
+/* ——— Menu « Télécharger » ——— */
+
+.dl {
+  position: relative;
+}
+
+.dl-arrow {
+  width: 18px;
+  height: 18px;
+  overflow: visible;
+  color: var(--accent);
+}
+
+/* Au survol, la flèche tombe dans son socle et revient d'en haut. */
+.dl-btn:hover .dl-arrow-shaft,
+.dl[data-open] .dl-arrow-shaft {
+  animation: dl-drop 900ms cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+@keyframes dl-drop {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  38% {
+    transform: translateY(7px);
+    opacity: 0;
+  }
+  39% {
+    transform: translateY(-9px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.dl-chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transition: transform 320ms cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+.dl[data-open] .dl-chevron {
+  transform: rotate(180deg);
+}
+
+/* Le panneau se déplie depuis le bouton ; fermé, il reste dans la page mais invisible et inatteignable. */
+.dl-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: -70px;
+  display: grid;
+  gap: 2px;
+  width: 316px;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)), rgba(7, 37, 35, 0.97);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 34px 80px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-12px) scale(0.94);
+  transform-origin: 70% 0;
+  transition:
+    opacity 180ms ease,
+    transform 240ms ease,
+    visibility 0s linear 240ms;
+}
+
+.dl[data-open] .dl-panel {
+  visibility: visible;
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 220ms ease,
+    transform 460ms cubic-bezier(0.2, 1.25, 0.3, 1),
+    visibility 0s;
+}
+
+.dl-title,
+.dl-foot {
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dl-foot {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-weight: 500;
+}
+
+.dl-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px 8px 8px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  transition: background-color 180ms ease;
+}
+
+/* À l'ouverture, les quatre choix montent l'un après l'autre (--i = rang). */
+.dl[data-open] .dl-item {
+  animation: dl-item-in 520ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  animation-delay: calc(70ms + var(--i) * 55ms);
+}
+
+@keyframes dl-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.dl-item:hover,
+.dl-item:focus-visible {
+  outline: none;
+  background: rgba(238, 245, 242, 0.08);
+}
+
+.dl-ico {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: rgba(253, 188, 7, 0.12);
+  color: var(--accent);
+  transition:
+    transform 360ms cubic-bezier(0.3, 1.5, 0.4, 1),
+    background-color 220ms ease,
+    color 220ms ease;
+}
+
+.dl-ico svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* Le pictogramme se dessine trait par trait (pathLength = 1 dans le composant). */
+.dl-ico path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.dl[data-open] .dl-ico path {
+  animation: dl-draw 900ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: calc(160ms + var(--i) * 55ms);
+}
+
+@keyframes dl-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+.dl-item:hover .dl-ico,
+.dl-item:focus-visible .dl-ico {
+  background: var(--accent);
+  color: var(--on-accent);
+  transform: scale(1.08) rotate(-5deg);
+}
+
+.dl-text {
+  display: grid;
+  gap: 1px;
+}
+
+.dl-text strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dl-text small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.dl-go {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity 200ms ease,
+    transform 260ms cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+.dl-item:hover .dl-go,
+.dl-item:focus-visible .dl-go {
+  opacity: 1;
+  transform: none;
+}
+
+/* La plateforme de l'appareil utilisé est signalée, avec un point qui bat doucement. */
+.dl-here {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(61, 220, 151, 0.12);
+  color: #7be8b7;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dl-here::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3ddc97;
+  animation: dl-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dl-pulse {
+  50% {
+    box-shadow: 0 0 0 5px rgba(61, 220, 151, 0);
+    opacity: 0.55;
+  }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(61, 220, 151, 0.5);
+    opacity: 1;
+  }
+}
+
+/* Écran moyen : « Application » est retiré, le grand bouton « Ouvrir l'application » est juste dessous. */
+@media (max-width: 720px) {
+  .hd-link-app {
+    display: none;
+  }
+}
+
+/* Téléphone : monogramme à la place du logo complet, et le menu prend la largeur de la barre. */
+@media (max-width: 640px) {
+  .hd {
+    padding: 8px 10px 0;
+  }
+
+  .hd-bar,
+  .hd[data-scrolled] .hd-bar {
+    padding: 8px 8px 8px 12px;
+  }
+
+  .hd-logo-full {
+    display: none;
+  }
+
+  .hd-logo-mark {
+    display: block;
+  }
+
+  .hd-link {
+    padding-inline: 12px;
+  }
+
+  .hd-cta {
+    margin-left: 2px;
+    padding-inline: 14px;
+  }
+
+  /* Le menu se cale sur la barre entière, et non sur le bouton : ses repères intermédiaires sont levés. */
+  .hd-nav,
+  .dl {
+    position: static;
+  }
+
+  /* Pas de survol au doigt : la pastille glissante n'a pas lieu d'être. */
+  .hd-pill {
+    display: none;
+  }
+
+  .dl-panel {
+    top: calc(100% + 10px);
+    right: 0;
+    left: 0;
+    width: auto;
+    transform-origin: 50% 0;
+  }
+}
+
+/* « Se connecter » s'écrit « Connexion » sur téléphone étroit (voir plus bas). */
+.hd-cta-short {
+  display: none;
+}
+
+@media (max-width: 420px) {
+  .dl-chevron,
+  .hd-cta-long {
+    display: none;
+  }
+
+  .hd-cta-short {
+    display: inline;
+  }
+
+  .hd-link,
+  .hd-cta {
+    font-size: 14px;
+  }
+
+  .hd-bar {
+    gap: 8px;
+  }
+
+  .hd .brand-logo,
+  .hd[data-scrolled] .brand-logo {
+    height: 26px;
+  }
+
+  .hd-link {
+    gap: 6px;
+    padding-inline: 8px;
+  }
+
+  .hd-cta {
+    margin-left: 0;
+    padding-inline: 10px;
+  }
 }
 
 .hm-hero {
@@ -2873,15 +3209,298 @@ a.btn-quiet:not(.btn-primary) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.hm-foot {
+/* ——— Guides et questions fréquentes de l'accueil ——— */
+
+/* Le titre principal contient deux lignes : ce qu'est l'application, puis le slogan. */
+.hm-title {
+  display: grid;
+  gap: 20px;
+  font: inherit;
+}
+
+.hm-title > span {
+  display: block;
+}
+
+.hm-guides {
+  padding-block: clamp(48px, 8vw, 96px) 0;
+}
+
+.hm-guides ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+  margin-top: clamp(24px, 4vw, 44px);
+}
+
+.hm-guides a {
+  display: grid;
+  gap: 10px;
+  height: 100%;
+  padding-top: 20px;
+  border-top: 2px solid var(--accent);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.hm-guides h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(22px, 2.4vw, 28px);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.hm-guides p {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.hm-guides a:hover .hm-go::after {
+  transform: translateX(5px);
+}
+
+.hm-faq {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: clamp(20px, 5vw, 64px);
+  padding-block: clamp(48px, 8vw, 96px) 0;
+}
+
+.faq {
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.faq details {
+  border-top: 1px solid var(--line-strong);
+}
+
+.faq summary {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px 24px;
-  padding-block: 26px 44px;
+  gap: 16px;
+  padding: 18px 2px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Croix qui devient un trait quand la réponse est ouverte. */
+.faq summary::after {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) center / 100% 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) center / 2px 100% no-repeat;
+  transition: transform 260ms cubic-bezier(0.3, 1.3, 0.4, 1);
+}
+
+.faq details[open] summary::after {
+  background: linear-gradient(var(--accent), var(--accent)) center / 100% 2px no-repeat;
+  transform: rotate(180deg);
+}
+
+.faq h3 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(17px, 1.9vw, 20px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.faq details > p {
+  max-width: 62ch;
+  padding: 0 2px 16px;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.faq details[open] > p {
+  animation: rise 320ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+}
+
+/* ——— Pied de page du site ——— */
+
+.site-foot {
+  display: grid;
+  gap: 16px;
+  margin-top: clamp(40px, 6vw, 72px);
+  padding-block: 28px 44px;
   border-top: 1px solid var(--line);
   font-size: 14px;
   color: var(--muted);
+}
+
+.site-foot ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+}
+
+.site-foot a {
+  display: inline-block;
+  padding-block: 6px;
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 160ms ease;
+}
+
+.site-foot a:hover {
+  border-bottom-color: var(--accent);
+}
+
+/* ——— Pages de contenu (guides, à propos) ——— */
+
+.doc {
+  padding-block: clamp(20px, 4vw, 48px) 0;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: clamp(18px, 3vw, 30px);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.crumbs a {
+  color: var(--muted);
+}
+
+.doc article {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+}
+
+.doc h1 {
+  max-width: 20ch;
+  font-family: var(--display);
+  font-size: clamp(32px, 5.4vw, 58px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.doc h2 {
+  margin-top: 22px;
+  font-family: var(--display);
+  font-size: clamp(22px, 3vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.doc article p,
+.doc article li {
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.doc-lead {
+  font-size: clamp(18px, 2vw, 21px) !important;
+  color: var(--muted);
+}
+
+.doc-lead strong {
+  color: var(--ink);
+}
+
+.doc article ul,
+.doc article ol {
+  display: grid;
+  gap: 8px;
+  padding-left: 22px;
+}
+
+.doc article ul {
+  list-style: disc;
+}
+
+.doc article ol {
+  list-style: decimal;
+}
+
+.doc article a:not(.btn) {
+  color: var(--ink);
+  text-decoration-color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+/* Tableau : il défile dans son cadre sur petit écran, sans élargir la page. */
+.doc-table {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.doc-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.doc-table th,
+.doc-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.doc-table tr:last-child > * {
+  border-bottom: 0;
+}
+
+.doc-table thead th {
+  background: var(--tint);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.doc-table tbody th {
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.doc-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 24px;
+  margin-top: 18px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+/* La page « À propos » réutilise le panneau de l'application, sans son cadre. */
+.doc > .about {
+  max-width: 760px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  .hm-guides ul,
+  .hm-faq {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 760px) {
@@ -2895,23 +3514,6 @@ a.btn-quiet:not(.btn-primary) {
     width: min(100%, 340px);
   }
 
-  .hm-nav {
-    gap: 16px;
-    font-size: 14px;
-  }
-
-  .hm-top .brand-logo {
-    max-width: 44vw;
-    height: auto;
-  }
-}
-
-/* Très petit écran : le bouton « Ouvrir l'application » est juste dessous, le lien du haut ferait doublon. */
-@media (max-width: 380px) {
-  .hm-nav a:first-child {
-    display: none;
-  }
-
   .hm-rows a {
     grid-template-columns: minmax(0, 1fr) auto;
   }
@@ -2919,6 +3521,415 @@ a.btn-quiet:not(.btn-primary) {
   .hm-rows p {
     grid-column: 1 / -1;
     grid-row: 2;
+  }
+}
+
+/* ——— Piano : commandes et plein écran ——— */
+
+/* Bouton à deux états (pédale) et bouton plein écran, en pastille sur la scène. */
+.chip-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 16px;
+  border: 1px solid var(--felt-line);
+  border-radius: 999px;
+  background: rgba(236, 242, 238, 0.1);
+  color: var(--on-felt);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
+}
+
+.chip-toggle:hover {
+  background: rgba(236, 242, 238, 0.18);
+}
+
+.chip-toggle:active {
+  transform: scale(0.96);
+}
+
+.chip-toggle[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.chip-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Le bloc intérieur porte la mise en page de la scène du piano : commandes, affichage, clavier. */
+.piano-body {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 18px;
+  min-height: 0;
+}
+
+.piano .piano-keys {
+  height: auto;
+  min-height: clamp(190px, 50vw, 270px);
+}
+
+.piano-range {
+  margin-left: auto;
+}
+
+/* Les touches de l'ordinateur n'ont pas de sens sur un écran tactile. */
+@media (hover: none) and (pointer: coarse) {
+  .only-keyboard {
+    display: none;
+  }
+}
+
+/* Plein écran : la scène recouvre tout, il ne reste que la barre de commandes et le clavier. */
+html.piano-open,
+html.piano-open body {
+  overflow: hidden;
+}
+
+.piano.is-full {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
+.piano.is-full .piano-body {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom))
+    calc(12px + env(safe-area-inset-left));
+}
+
+.piano.is-full .piano-head {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.piano.is-full .piano-keys {
+  min-height: 0;
+  gap: 4px;
+}
+
+.piano.is-full .piano-octave {
+  gap: 4px;
+}
+
+.piano.is-full .pkey-white {
+  padding-bottom: 12px;
+  border-radius: 0 0 12px 12px;
+  font-size: 13px;
+}
+
+.piano.is-full .piano-range {
+  margin-left: 0;
+}
+
+/* Ce qui sonne, à droite de la barre. */
+.piano-now {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.piano-now strong {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.piano-now span {
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--on-felt-muted);
+  text-overflow: ellipsis;
+}
+
+/* Téléphone resté vertical et écran non basculé par le système : on tourne nous-mêmes l'affichage
+   d'un quart de tour. Le bloc prend la hauteur de l'écran pour largeur, et inversement. */
+.piano.is-full[data-turned] .piano-body {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 100vh;
+  width: 100dvh;
+  height: 100vw;
+  height: 100dvw;
+  /* Tourné, le haut de l'écran (encoche) se retrouve à gauche, le bas à droite. */
+  padding: 10px calc(12px + env(safe-area-inset-bottom)) 10px calc(12px + env(safe-area-inset-top));
+  transform: rotate(90deg);
+  transform-origin: top left;
+}
+
+/* ——— Téléphone : disposition d'application ———
+   En dessous de 720 px, la barre d'onglets est en bas (voir « Ossature ») ; ici, le reste suit :
+   en-tête fixe, écran qui remplit la hauteur, actions à portée de pouce, pas de pied de page. */
+
+.only-phone {
+  display: none;
+}
+
+/* Ligne de réglages (« À propos ») : libellé à gauche, chevron à droite. */
+.row-link {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 16px 12px 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+}
+
+.row-link span {
+  display: grid;
+  gap: 2px;
+}
+
+.row-link strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.row-link small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.row-link svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+@media (max-width: 719px) {
+  .only-phone {
+    display: flex;
+  }
+
+  /* L'écran est une colonne : en-tête, contenu qui prend toute la place restante, onglets en bas. */
+  .app {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    padding-top: 0;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  /* En-tête fixe, pleine largeur, translucide : le contenu défile dessous. */
+  .top {
+    position: sticky;
+    z-index: 9;
+    top: 0;
+    flex-wrap: nowrap;
+    margin-inline: calc(-1 * max(16px, env(safe-area-inset-left))) calc(-1 * max(16px, env(safe-area-inset-right)));
+    margin-bottom: 14px;
+    padding: calc(8px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 8px max(16px, env(safe-area-inset-left));
+    border-bottom: 1px solid var(--line);
+    background: rgba(3, 28, 27, 0.86);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+  }
+
+  .top .brand-logo {
+    height: 30px;
+  }
+
+  .main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .view {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .view > * {
+    min-width: 0;
+  }
+
+  /* La scène (micro, jeu, piano) et la zone de dépôt occupent la hauteur libre : rien ne flotte
+     au milieu d'un écran vide, et les boutons se retrouvent en bas, sous le pouce. */
+  .view > .stage,
+  .view > .drop {
+    flex: 1 0 auto;
+  }
+
+  .view > .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 14px 16px;
+    border-radius: 22px;
+  }
+
+  .view > .stage > :is(.readout, .lane, .piano-body) {
+    flex: 1 0 auto;
+  }
+
+  .view > .drop {
+    align-content: center;
+    padding: 32px 18px;
+  }
+
+  .readout {
+    min-height: 140px;
+  }
+
+  .piano-readout {
+    min-height: 96px;
+  }
+
+  .lane {
+    height: auto;
+    min-height: 240px;
+  }
+
+  /* Boutons d'action : pleine largeur, ou se partageant la ligne à plusieurs. */
+  .view > .actions > .btn,
+  .panel > .actions > .btn-primary {
+    flex: 1 1 auto;
+  }
+
+  .view > .actions > .note {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+
+  /* Choix à plusieurs options : sur toute la largeur, chaque option de même poids. */
+  .seg-wrap {
+    display: flex;
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .seg-wrap .seg-btn {
+    flex: 1 1 auto;
+  }
+
+  .view > .actions > .seg-wrap {
+    flex: 1 1 100%;
+  }
+
+  .panel {
+    padding: 18px 16px;
+  }
+
+  .account,
+  .account ~ .panel {
+    padding: 24px 18px 22px;
+  }
+
+  /* Piano : instrument, pédale et plein écran sur une ligne ; le choix de l'octave dessous, en large. */
+  .piano-head .sel {
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+
+  .piano-range {
+    flex: 1 1 100%;
+    margin-left: 0;
+  }
+
+  .piano-range output {
+    flex: 1;
+  }
+
+  .piano-full-btn span {
+    display: none;
+  }
+
+  .piano-full-btn {
+    padding-inline: 12px;
+  }
+
+  .piano.is-full .piano-range,
+  .piano.is-full .piano-head .sel {
+    flex: 0 1 auto;
+  }
+
+  /* En plein écran la barre a toute la longueur de l'écran : « Quitter » s'écrit en toutes lettres. */
+  .piano.is-full .piano-full-btn span {
+    display: inline;
+  }
+
+  .piano.is-full .piano-range output {
+    min-width: 96px;
+  }
+
+  /* Générer : la barre d'écoute reste sous l'en-tête pendant qu'on règle les pistes. */
+  .transport {
+    position: sticky;
+    z-index: 8;
+    top: calc(54px + env(safe-area-inset-top));
+    margin-inline: -6px;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    background: rgba(8, 40, 38, 0.9);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  /* Les deux boutons tiennent sur une ligne : « Écouter » prend la place, l'autre reste compact. */
+  .transport .btn {
+    min-height: 48px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .transport .btn-lg {
+    flex: 1 1 96px;
+    font-size: 16px;
+  }
+
+  .view > .transport > .btn:not(.btn-lg) {
+    flex: 0 1 auto;
+  }
+
+  .transport > .note {
+    padding-bottom: 4px;
+  }
+
+  /* Pas de pied de page dans une application : « À propos » est dans l'onglet Compte. */
+  .foot {
+    display: none;
   }
 }
 
@@ -2979,6 +3990,15 @@ html[data-installed] img {
 @media (max-width: 719px), (pointer: coarse) {
   .seg-btn {
     min-height: 40px;
+  }
+
+  .chip-btn {
+    min-height: 40px;
+    padding-inline: 14px;
+  }
+
+  .chips {
+    gap: 8px;
   }
 
   .seek {

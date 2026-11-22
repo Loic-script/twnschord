@@ -24,6 +24,12 @@ const ONE_HOUR = 60 * 60 * 1000;
 const MAX_PER_EMAIL = 10;
 /** Essais toutes adresses confondues, par connexion (contre le balayage d'adresses). */
 const MAX_PER_IP = 40;
+/**
+ * Essais pour une même adresse e-mail, toutes connexions confondues : l'adresse de la connexion vient
+ * d'un en-tête que l'expéditeur peut falsifier si aucun serveur frontal ne le réécrit ; ce plafond-ci
+ * borne donc les essais de mot de passe sur un compte quoi qu'il arrive.
+ */
+const MAX_PER_ACCOUNT = 30;
 /** Comptes créés par connexion et par heure. */
 const MAX_REGISTRATIONS = 10;
 /** Une personne met plus de temps que cela à remplir le formulaire d'inscription. */
@@ -60,7 +66,11 @@ export async function POST(request: Request, context: Context) {
     if (!EMAIL_RE.test(email) || email.length > 254) return fail("Adresse e-mail invalide.", 400);
 
     const ip = (request.headers.get("x-forwarded-for") ?? "local").split(",")[0].trim();
-    if (limited(`auth-ip|${ip}`, MAX_PER_IP, TEN_MINUTES) || limited(`auth|${ip}|${email}`, MAX_PER_EMAIL, TEN_MINUTES)) {
+    if (
+      limited(`auth-ip|${ip}`, MAX_PER_IP, TEN_MINUTES) ||
+      limited(`auth|${ip}|${email}`, MAX_PER_EMAIL, TEN_MINUTES) ||
+      limited(`auth-compte|${email}`, MAX_PER_ACCOUNT, TEN_MINUTES)
+    ) {
       return fail("Trop de tentatives. Réessayez dans quelques minutes.", 429);
     }
 

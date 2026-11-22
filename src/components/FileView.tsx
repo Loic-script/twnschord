@@ -7,12 +7,15 @@ import type { NoteNaming } from "@/lib/audio/notes";
 import type { Track } from "./App";
 import Player from "./Player";
 
-type Phase =
+/** Où en est l'analyse d'un fichier. Tenu par App : l'analyse continue quand on change d'onglet. */
+export type FilePhase =
   | { kind: "idle" }
   | { kind: "working"; stage: string; fraction: number | null }
   | { kind: "error"; message: string };
 
 interface Props {
+  phase: FilePhase;
+  onPhase: (phase: FilePhase) => void;
   track: Track | null;
   naming: NoteNaming;
   user: User | null;
@@ -24,13 +27,13 @@ interface Props {
   onGoAccount: () => void;
 }
 
-export default function FileView({ track, naming, user, online, incoming, onIncomingTaken, onTrack, onGoAccount }: Props) {
-  const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+export default function FileView({ phase, onPhase: setPhase, track, naming, user, online, incoming, onIncomingTaken, onTrack, onGoAccount }: Props) {
   const [drag, setDrag] = useState(false);
   const taken = useRef<File | null>(null);
 
   const analyze = async (file: File | undefined) => {
-    if (!file) return;
+    // Une seule analyse à la fois : elles se partagent le même moteur.
+    if (!file || phase.kind === "working") return;
     setPhase({ kind: "working", stage: file.type.startsWith("video/") ? "Extraction du son de la vidéo" : "Lecture du fichier", fraction: null });
     try {
       const decoded = await decodeToMono(file);

@@ -1,6 +1,10 @@
 import Link from "next/link";
-import { APP_NAME, MADE_IN, TEAM_MEMBERS, TEAM_NAME } from "@/lib/app";
+import { APP_NAME } from "@/lib/app";
+import { applicationLd, FAQ, faqLd, graph, organizationLd, PAGES, websiteLd } from "@/lib/seo";
 import InstallButtons from "./InstallButtons";
+import JsonLd from "./JsonLd";
+import LandingHeader from "./LandingHeader";
+import SiteFooter from "./SiteFooter";
 
 const TOOLS: { tab: string; title: string; text: string }[] = [
   { tab: "live", title: "Micro", text: "Jouez : le nom de la note ou de l'accord s'affiche. Un accordeur est intégré." },
@@ -9,6 +13,9 @@ const TOOLS: { tab: string; title: string; text: string }[] = [
   { tab: "game", title: "Jeu", text: "Chantez la note demandée pour ouvrir les portes, ou jouez du piano sur l'écran." },
 ];
 
+// Les guides : de vraies pages de texte, que les moteurs de recherche et les assistants peuvent lire.
+const GUIDES = [PAGES.chords, PAGES.song, PAGES.solfa];
+
 // Touches blanches de la maquette ; celles de l'accord de La mineur 7 sont allumées.
 const KEYS = [true, false, true, false, true, true, false];
 
@@ -16,22 +23,21 @@ const KEYS = [true, false, true, false, true, true, false];
 export default function Landing() {
   return (
     <div className="hm">
-      <header className="hm-top hm-wrap">
-        <img className="brand-logo" src="/logo/twinschord-logo-reverse.svg" alt={APP_NAME} width={1267} height={267} />
-        <nav className="hm-nav" aria-label="Accès">
-          <Link href="/app">Application</Link>
-          <Link href="/connexion">Se connecter</Link>
-        </nav>
-      </header>
+      {/* Données structurées : qui publie, quel site, quelle application, et les questions affichées plus bas. */}
+      <JsonLd data={graph(organizationLd(), websiteLd(), applicationLd(), faqLd())} />
+      <LandingHeader />
 
       <main>
         <section className="hm-hero hm-wrap">
           <div className="hm-copy">
-            <p className="hm-kicker">Pour pianistes, guitaristes et choristes</p>
-            <h1 className="hm-h1">L&apos;accord juste, au moment où vous le jouez.</h1>
+            {/* Le titre principal dit d'abord ce qu'est l'application, puis porte le slogan. */}
+            <h1 className="hm-title">
+              <span className="hm-kicker">Reconnaissance d&apos;accords et de notes · piano, guitare, voix</span>{" "}
+              <span className="hm-h1">L&apos;accord juste, au moment où vous le jouez.</span>
+            </h1>
             <p className="hm-lead">
               Posez votre téléphone sur le piano : {APP_NAME} nomme la note ou l&apos;accord que vous jouez. Donnez-lui un
-              enregistrement : il en sort la grille, le tempo et le solfa.
+              enregistrement : il en sort la grille d&apos;accords, le tempo et le solfa.
             </p>
             <div className="hm-cta">
               <Link className="btn btn-lg btn-primary" href="/app">
@@ -83,6 +89,46 @@ export default function Landing() {
           </div>
         </section>
 
+        <section className="hm-guides hm-wrap" aria-labelledby="hm-guides">
+          <h2 id="hm-guides" className="hm-h2">
+            Comprendre ce que l&apos;on joue.
+          </h2>
+          <ul>
+            {GUIDES.map((guide) => (
+              <li key={guide.path}>
+                <Link href={guide.path}>
+                  <h3>{guide.label}</h3>
+                  <p>{guide.description}</p>
+                  <span className="hm-go">Lire</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="hm-faq hm-wrap" id="questions" aria-labelledby="hm-faq">
+          <h2 id="hm-faq" className="hm-h2">
+            Questions fréquentes
+          </h2>
+          <div className="faq">
+            {FAQ.map((entry, index) => (
+              <details key={entry.question} open={index === 0}>
+                <summary>
+                  <h3>{entry.question}</h3>
+                </summary>
+                <p>{entry.answer}</p>
+                {entry.more && (
+                  <p>
+                    <Link className="hm-link" href={entry.more.href}>
+                      {entry.more.label}
+                    </Link>
+                  </p>
+                )}
+              </details>
+            ))}
+          </div>
+        </section>
+
         <section className="hm-install hm-wrap" aria-labelledby="hm-install">
           <div>
             <h2 id="hm-install" className="hm-h2">
@@ -99,12 +145,7 @@ export default function Landing() {
         </section>
       </main>
 
-      <footer className="hm-foot hm-wrap">
-        <p>
-          Conçu et développé à {MADE_IN} par {TEAM_NAME} — {TEAM_MEMBERS.join(" et ")}.
-        </p>
-        <Link href="/app?onglet=about">À propos et confidentialité</Link>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

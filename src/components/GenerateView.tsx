@@ -143,7 +143,11 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
   };
 
   // — Lecture
-  const stop = useCallback(() => {
+  /** Numéro de la dernière demande : une préparation devenue caduque (arrêt, nouvelle demande) s'abandonne. */
+  const runs = useRef(0);
+
+  /** Coupe le son en cours. */
+  const halt = useCallback(() => {
     const s = session.current;
     session.current = null;
     if (s) {
@@ -155,9 +159,14 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
       }
       s.source.disconnect();
     }
+  }, []);
+
+  const stop = useCallback(() => {
+    runs.current++;
+    halt();
     setPlaying(false);
     setActive(-1);
-  }, []);
+  }, [halt]);
 
   const start = useCallback(async () => {
     const opts = optionsRef.current;
@@ -165,6 +174,7 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
       stop();
       return;
     }
+    const run = ++runs.current;
     setError(null);
     try {
       // Le contexte audio doit être ouvert pendant le clic, avant tout calcul.
@@ -173,11 +183,13 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
       setBusy(true);
       await new Promise((resolve) => setTimeout(resolve, 20));
       const song = renderSong(opts);
+      // « Arrêter » a été pressé, l'écran quitté ou une autre demande lancée pendant la préparation.
+      if (runs.current !== run) return;
       const loop = foldTail(song.samples, song.loopLength);
       const buffer = ctx.createBuffer(1, loop.length, song.sampleRate);
       buffer.getChannelData(0).set(loop);
 
-      stop();
+      halt();
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
@@ -207,7 +219,10 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
   useEffect(() => {
     optionsRef.current = options;
     if (!session.current) return;
-    const timer = setTimeout(() => void start(), 300);
+    const timer = setTimeout(() => {
+      // Seulement si la lecture est toujours en cours : un arrêt entre-temps ne doit pas la relancer.
+      if (session.current) void start();
+    }, 300);
     return () => clearTimeout(timer);
   }, [options, start]);
 
@@ -255,7 +270,8 @@ export default function GenerateView({ naming }: { naming: NoteNaming }) {
         <Keyboard chroma={glow} active={tones} naming={naming} />
       </section>
 
-      <div className="actions">
+      {/* « transport » : sur téléphone, cette barre reste sous l'en-tête pendant qu'on règle les pistes plus bas. */}
+      <div className="actions transport">
         {playing ? (
           <button type="button" className="btn btn-lg btn-stop" onClick={stop}>
             Arrêter

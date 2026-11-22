@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // Adresses de service (comptes, bibliothèque, notifications) : jamais dans un index de recherche,
+        // même si un lien y menait. S'ajoute à l'interdiction d'exploration de robots.txt.
+        source: "/api/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
         // Le service worker doit toujours être revalidé pour que les mises à jour passent.
         source: "/sw.js",
         headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],

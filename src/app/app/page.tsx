@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import App from "@/components/App";
-import { APP_NAME } from "@/lib/app";
+import { pageMetadata, PAGES } from "@/lib/seo";
 
-// Le titre est le seul nom de l'application : c'est lui qui s'affiche dans la barre de sa fenêtre une fois installée.
-export const metadata: Metadata = { title: APP_NAME, alternates: { canonical: "/app" } };
+// Titre = le seul nom de l'application (celui de sa fenêtre une fois installée). La page n'est pas
+// indexée : elle n'a presque pas de texte, l'accueil et les guides portent le référencement.
+export const metadata: Metadata = pageMetadata(PAGES.app);
 
 /** L'application elle-même (micro, jeu, morceau, générateur…). La page d'accueil est à la racine du site. */
 export default function AppPage() {

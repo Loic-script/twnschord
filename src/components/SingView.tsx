@@ -53,7 +53,14 @@ export default function SingView({ naming }: { naming: NoteNaming }) {
   }, []);
 
   // Le micro est coupé dès qu'on quitte cet écran.
-  useEffect(() => stop, [stop]);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      stop();
+    };
+  }, [stop]);
 
   const start = async () => {
     setError(null);
@@ -61,12 +68,25 @@ export default function SingView({ naming }: { naming: NoteNaming }) {
     try {
       stop();
       const mic = await openMic();
+      // Écran quitté pendant la demande d'autorisation : le micro qui vient de s'ouvrir est refermé aussitôt.
+      if (!alive.current) {
+        mic.close();
+        return;
+      }
       const pool = LEVELS.find((l) => l.id === level)?.notes ?? LEVELS[0].notes;
       const live = new LiveAnalyzer(mic.ctx.sampleRate, mic.analyser.fftSize);
       const buffer = new Float32Array(mic.analyser.fftSize);
       const s: Session = { mic, raf: 0, state: newGame(pool, Math.random), muteUntil: 0 };
       session.current = s;
-      mic.stream.getAudioTracks()[0]?.addEventListener("ended", stop);
+      // Micro débranché ou retiré par le système en pleine partie : la partie s'arrête et le dit,
+      // au lieu de rester figée sur une porte.
+      mic.stream.getAudioTracks()[0]?.addEventListener("ended", () => {
+        if (session.current !== s) return;
+        stop();
+        setGame(null);
+        setFlash(null);
+        setError("Le micro a été coupé. Relancez la partie.");
+      });
       setGame(s.state);
       setFlash(null);
 

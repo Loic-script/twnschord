@@ -10,8 +10,16 @@ export function pushReady(): boolean {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
     const subject = process.env.VAPID_SUBJECT;
-    configured = Boolean(publicKey && privateKey && subject);
-    if (configured) webpush.setVapidDetails(subject as string, publicKey as string, privateKey as string);
+    configured = false;
+    if (publicKey && privateKey && subject) {
+      try {
+        webpush.setVapidDetails(subject, publicKey, privateKey);
+        configured = true;
+      } catch (err) {
+        // Clé ou adresse de contact mal formée : les notifications restent désactivées, le reste fonctionne.
+        console.error("[push] configuration invalide :", err instanceof Error ? err.message : err);
+      }
+    }
   }
   return configured;
 }
@@ -33,7 +41,8 @@ export type Delivery = "sent" | "expired" | "failed";
 export async function deliver(subscription: PushSubscriptionData, message: PushMessage): Promise<Delivery> {
   if (!pushReady()) return "failed";
   try {
-    await webpush.sendNotification(subscription, buildPayload(message), { TTL: 24 * 3600, urgency: "high" });
+    // `timeout` : un service de notification qui ne répond pas ne doit pas retenir la requête indéfiniment.
+    await webpush.sendNotification(subscription, buildPayload(message), { TTL: 24 * 3600, urgency: "high", timeout: 10_000 });
     return "sent";
   } catch (err) {
     const status = (err as { statusCode?: number }).statusCode;

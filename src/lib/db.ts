@@ -9,6 +9,9 @@ function pool(): Pool {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) throw new Error("DATABASE_URL n'est pas défini");
     holder.__diapasonPool = new Pool({ connectionString, max: 10, connectionTimeoutMillis: 5000 });
+    // Une connexion au repos qui se coupe (redémarrage de PostgreSQL, pare-feu) émet « error » sur le pool :
+    // sans écouteur, Node arrêterait tout le serveur. La connexion est simplement remplacée à la demande suivante.
+    holder.__diapasonPool.on("error", (err) => console.error("[db]", err.message));
   }
   return holder.__diapasonPool;
 }

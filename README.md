@@ -54,7 +54,32 @@ Le logo d'origine est dans `design/logo-original.png`. Il a été vectorisé une
 
 - **Adresse du site** : définir `NEXT_PUBLIC_SITE_URL` (voir `.env.example`) avec l'adresse publique. Elle est reprise dans `/sitemap.xml` et `/robots.txt`, générés par `src/app/sitemap.ts` et `src/app/robots.ts`. Sans elle, ces fichiers indiquent `http://localhost:3000`.
 - **Cookies** : l'application ne dépose qu'un cookie de session, à la connexion. Le bandeau (`src/components/CookieNotice.tsx`) est donc une information, pas une demande d'accord. Si un outil de mesure d'audience ou de publicité est ajouté un jour, il faudra en faire un vrai choix accepter / refuser avant tout dépôt.
-- **Anti-spam** : la création de compte refuse les formulaires remplis par des robots (champ piège invisible, envoi trop rapide) et limite les essais par connexion (`src/lib/rateLimit.ts`). Ces compteurs sont en mémoire : ils conviennent à un serveur unique.
+- **Anti-spam** : la création de compte refuse les formulaires remplis par des robots (champ piège invisible, envoi trop rapide) et limite les essais par connexion et par adresse e-mail (`src/lib/rateLimit.ts`). Ces compteurs sont en mémoire : ils conviennent à un serveur unique.
+- **Serveur frontal** : l'adresse du visiteur est lue dans l'en-tête `X-Forwarded-For`. Le serveur frontal (Nginx, Caddy, hébergeur) doit donc **réécrire** cet en-tête avec l'adresse réelle, sans quoi un visiteur pourrait le falsifier pour contourner la limite par connexion. Le plafond par adresse e-mail (30 essais par 10 minutes) protège les comptes dans tous les cas.
+- **Installation légère** : `npm ci --omit=dev` suffit en production (`sharp`, `vitest` et TypeScript ne servent qu'au développement) — après `npm run build`, fait avec toutes les dépendances.
+
+## Référencement
+
+Tout ce qui concerne les moteurs de recherche et les assistants IA part d'un seul fichier, `src/lib/seo.ts` : titres, descriptions, questions fréquentes, données structurées. Les balises, le sitemap, `llms.txt` et le texte visible en découlent, et disent donc toujours la même chose.
+
+**Ce qui est en place**
+
+- **Pages indexables** : l'accueil et quatre pages de texte — `/accords`, `/accords-d-une-chanson`, `/solfa`, `/a-propos`. Chacune a son titre, sa description, son adresse canonique, son aperçu de partage et ses données structurées (`Organization`, `WebSite`, `WebApplication`, `FAQPage`, `Article`, `BreadcrumbList`).
+- **Pages hors index** : `/app` (presque pas de texte lisible par un robot) et `/connexion` portent `noindex` ; `/api/` est interdit d'exploration et renvoie `X-Robots-Tag: noindex`.
+- **`/robots.txt`** (`src/app/robots.ts`) : pages publiques ouvertes aux moteurs (Googlebot, Bingbot, Applebot) et aux robots d'IA — recherche (OAI-SearchBot, Claude-SearchBot, PerplexityBot), lecture à la demande (ChatGPT-User, Claude-User, Perplexity-User) et entraînement (GPTBot, ClaudeBot, Google-Extended, Applebot-Extended). Pour refuser l'entraînement sans toucher au référencement : `ALLOW_TRAINING = false` dans ce fichier.
+- **`/sitemap.xml`** : uniquement les pages indexables, avec leur date de modification.
+- **`/llms.txt`** : présentation du site en texte simple. Aucun moteur ne déclare s'en servir à ce jour ; il ne coûte rien.
+
+**À la mise en ligne**
+
+1. Définir `NEXT_PUBLIC_SITE_URL` (adresse publique en `https`) dans `.env.local`, puis `npm run build`. Sans elle, sitemap et adresses canoniques pointent vers `localhost` — la construction l'affiche en avertissement.
+2. **Google Search Console** (search.google.com/search-console) : ajouter la propriété « Préfixe de l'URL », choisir la vérification par « Balise HTML », copier le code dans `GOOGLE_SITE_VERIFICATION`, reconstruire, redéployer, cliquer sur « Vérifier ». Puis, dans « Sitemaps », envoyer `sitemap.xml`.
+3. **Bing Webmaster Tools** (bing.com/webmasters) : importer le site depuis Search Console, ou le vérifier par balise (`BING_SITE_VERIFICATION`), puis envoyer `sitemap.xml`. Bing alimente aussi Copilot.
+4. **IndexNow** (facultatif, pour Bing et ses partenaires — pas Google) : `npm run seo:indexnow -- --cle` propose une clé à mettre dans `INDEXNOW_KEY` ; `npm run seo:indexnow` crée le fichier de clé, puis, une fois le site redéployé, envoie les adresses du sitemap.
+
+**Quand un texte change** : modifier la page, et mettre à jour son champ `updated` dans `src/lib/seo.ts` (c'est la date du sitemap). Une nouvelle page de contenu s'ajoute à `PAGES`, dans le même fichier, et à `SiteFooter.tsx`.
+
+**À savoir** : Google n'affiche plus d'encadré pour les questions fréquentes (retiré en 2026) et ignore la balise de mots-clés ; les questions restent utiles parce qu'elles sont affichées sur la page. L'application ne déclare aucune note ni aucun avis : il n'en existe pas.
 
 ## Notifications push
 
@@ -82,7 +107,9 @@ Installée (Android, Windows, iPhone, Mac), TwinsChord se comporte en logiciel e
 
 - **Pas de page d'accueil** : l'icône ouvre directement l'application (`/app`). La racine `/` et tout lien interne vers elle y renvoient (script de `src/app/layout.tsx`, `src/components/InstalledGate.tsx`). Dans un navigateur, l'accueil reste inchangé.
 - **Hors ligne** : l'application, ses polices et le moteur d'analyse sont gardés sur l'appareil ; micro, jeu, analyse d'un morceau et générateur marchent sans réseau. Seuls le compte et la bibliothèque demandent Internet.
-- **Mises à jour** : une nouvelle version se télécharge en arrière-plan, puis un bandeau « Mise à jour prête — Redémarrer » s'affiche (`src/components/UpdateNotice.tsx`). Sans clic, elle s'applique à la prochaine ouverture. Pour publier une version : changer `CACHE` dans `public/sw.js`.
+- **Poids sur l'appareil** : moins de 900 Ko. Ne sont gardés que les fichiers utiles hors ligne : polices du sous-ensemble latin, pas de script de compatibilité pour vieux navigateurs. Sur réseau très lent, la page déjà enregistrée s'affiche au bout de 4 secondes au lieu d'attendre.
+- **Mises à jour du site** : à chaque nouvelle version déployée, l'application installée récupère d'elle-même les nouveaux fichiers à la prochaine ouverture en ligne, et **retire ceux de l'ancienne version** — elle ne grossit pas au fil des déploiements. Rien à faire à la main.
+- **Mises à jour du service worker** : quand `public/sw.js` lui-même change, la nouvelle version se télécharge en arrière-plan, puis un bandeau « Mise à jour prête — Redémarrer » s'affiche (`src/components/UpdateNotice.tsx`). Sans clic, elle s'applique à la prochaine ouverture. Changer `CACHE` dans ce fichier repart d'un cache entièrement neuf.
 - **Raccourcis** : clic droit sur l'icône (Windows, Mac) ou appui long (Android) → Micro, Morceau, Générer, Jeu.
 - **« Ouvrir avec TwinsChord »** (ordinateur, Chrome ou Edge) : un fichier audio ou vidéo ouvert depuis l'explorateur part directement à l'analyse.
 - **« Partager → TwinsChord »** (Android) : un audio reçu dans une autre application peut être envoyé à TwinsChord ; il reste sur l'appareil (`public/sw.js`, adresse `/app/recevoir`).
