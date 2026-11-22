@@ -28,14 +28,61 @@ async function save(path, buffer, note) {
   done.push(`${path} — ${note}`);
 }
 
-// ——— Icônes de l'application installée ———
-// « any » : affichée telle quelle ; « maskable » : le système la rogne (rond, carré arrondi…),
-// le monogramme y est donc plus petit pour rester dans la zone toujours visible.
-for (const size of [192, 512]) {
-  await save(`public/icons/icon-${size}.png`, await canvas("mark", size, size, 0.72, WHITE), `icône d'installation ${size} px`);
-  await save(`public/icons/icon-maskable-${size}.png`, await canvas("mark", size, size, 0.54, WHITE), `icône rognable ${size} px (Android)`);
+/**
+ * Monogramme détouré, sur fond transparent : le logo posé sur sa propre silhouette élargie d'un liseré
+ * clair. Sans carré de fond, il se lit sur n'importe quel fond d'écran — le T vert foncé disparaîtrait
+ * sinon sur un bureau sombre. `fill` : part de la largeur occupée ; `ring` : épaisseur du liseré.
+ */
+async function outlined(size, fill, ring) {
+  const pad = Math.ceil(size * ring) + 2;
+  const art = await render("mark", Math.round(size * fill) - 2 * pad);
+  const { width, height } = await sharp(art).metadata();
+  const W = width + pad * 2;
+  const H = height + pad * 2;
+  const clear = { r: 0, g: 0, b: 0, alpha: 0 };
+  const placed = await sharp({ create: { width: W, height: H, channels: 4, background: clear } }).composite([{ input: art, left: pad, top: pad }]).png().toBuffer();
+  // Silhouette élargie d'un disque de rayon r, puis bord adouci.
+  const alpha = await sharp(placed).extractChannel("alpha").raw().toBuffer();
+  const r = Math.max(1, Math.round(size * ring));
+  const disc = [];
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (dx * dx + dy * dy <= r * r) disc.push([dx, dy]);
+  const grown = Buffer.alloc(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let best = 0;
+      for (const [dx, dy] of disc) {
+        const xx = x + dx;
+        const yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const a = alpha[yy * W + xx];
+        if (a > best) {
+          best = a;
+          if (best === 255) break;
+        }
+      }
+      grown[y * W + x] = best;
+    }
+  }
+  // extractChannel(0) : le flou rend trois canaux, il n'en faut qu'un pour la transparence.
+  const soft = await sharp(grown, { raw: { width: W, height: H, channels: 1 } }).blur(Math.max(0.6, size / 512)).extractChannel(0).raw().toBuffer();
+  const halo = await sharp({ create: { width: W, height: H, channels: 3, background: colors.clair } }).joinChannel(soft, { raw: { width: W, height: H, channels: 1 } }).png().toBuffer();
+  const badge = await sharp(halo).composite([{ input: placed }]).png().toBuffer();
+  return sharp({ create: { width: size, height: size, channels: 4, background: clear } })
+    .composite([{ input: badge, gravity: "centre" }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
 }
-await save("src/app/apple-icon.png", await canvas("mark", 180, 180, 0.72, WHITE), "icône iPhone / iPad");
+
+// ——— Icônes de l'application installée ———
+// « any » (Windows, Mac, Chrome OS) : monogramme détouré, sans fond.
+// « maskable » (Android) et iPhone : ces systèmes imposent un fond à l'icône (Android la rogne en rond
+// ou en carré arrondi et comble la transparence en blanc ; iOS la comble en noir). Ce fond est donc le
+// vert de la marque, avec le monogramme clair, plutôt qu'un carré blanc.
+for (const size of [192, 512]) {
+  await save(`public/icons/icon-${size}.png`, await outlined(size, 0.92, 0.035), `icône d'installation ${size} px, sans fond`);
+  await save(`public/icons/icon-maskable-${size}.png`, await canvas("mark-reverse", size, size, 0.54, colors.vert), `icône rognable ${size} px (Android)`);
+}
+await save("src/app/apple-icon.png", await canvas("mark-reverse", 180, 180, 0.7, colors.vert), "icône iPhone / iPad");
 
 // Pictogramme de notification : silhouette blanche sur fond transparent (le système n'en garde que la forme).
 await save("public/icons/badge-96.png", await canvas("mark-mono-white", 96, 96, 0.9, null), "pictogramme de notification");

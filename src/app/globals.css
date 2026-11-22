@@ -1140,11 +1140,58 @@ button {
   align-content: start;
   gap: 10px 0;
   max-height: min(58dvh, 560px);
+  /* Défilement vertical seulement : les notes passent à la ligne dans leur case (voir .beat-notes),
+     rien ne dépasse sur le côté. */
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 12px 8px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--card);
+}
+
+/* Barre de défilement aux couleurs de l'application : fine, arrondie, sans flèches, posée sur un
+   rail transparent qui s'arrête avant les coins arrondis du cadre ; elle s'éclaircit au survol et
+   passe au jaune quand on la tient. (Chrome, Edge, Safari.) */
+.sheet::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+.sheet::-webkit-scrollbar-track {
+  margin-block: 12px;
+  background: transparent;
+}
+
+.sheet::-webkit-scrollbar-thumb {
+  min-height: 48px;
+  border: 4px solid transparent;
+  border-radius: 999px;
+  background: rgba(238, 245, 242, 0.2) padding-box;
+}
+
+.sheet::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(238, 245, 242, 0.38);
+}
+
+.sheet::-webkit-scrollbar-thumb:active {
+  background-color: var(--accent);
+}
+
+.sheet::-webkit-scrollbar-button,
+.sheet::-webkit-scrollbar-corner {
+  display: none;
+  background: transparent;
+}
+
+/* Firefox, qui ne connaît pas les règles ci-dessus : barre fine aux mêmes couleurs. (Réservé à lui :
+   dans Chrome, ces deux propriétés feraient ignorer le style détaillé.) */
+@supports not selector(::-webkit-scrollbar) {
+  .sheet {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(238, 245, 242, 0.3) transparent;
+  }
 }
 
 @media (min-width: 720px) {
@@ -1208,6 +1255,11 @@ button {
   font-family: var(--mono);
   font-size: 15px;
   line-height: 22px;
+}
+
+/* Une note ne se coupe jamais ; seules les notes d'un même temps peuvent passer à la ligne, après le point. */
+.tok,
+.tok-dot {
   white-space: nowrap;
 }
 

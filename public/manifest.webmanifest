@@ -15,10 +15,10 @@
   "prefer_related_applications": false,
   "launch_handler": { "client_mode": ["navigate-existing", "auto"] },
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    { "src": "/icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "screenshots": [
     {
@@ -41,25 +41,25 @@
       "name": "Micro — reconnaître une note ou un accord",
       "short_name": "Micro",
       "url": "/app?onglet=live",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Morceau — analyser un fichier",
       "short_name": "Morceau",
       "url": "/app?onglet=file",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Générer — jouer une suite d'accords",
       "short_name": "Générer",
       "url": "/app?onglet=generate",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Jeu — chant et piano",
       "short_name": "Jeu",
       "url": "/app?onglet=game",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [{ "src": "/icons/icon-192.png?v=2", "sizes": "192x192", "type": "image/png" }]
     }
   ],
   "file_handlers": [

@@ -5,7 +5,7 @@
 // 2. recevoir les notifications push, même application fermée, et ouvrir le bon écran au clic ;
 // 3. recevoir un fichier audio ou vidéo envoyé par le menu « Partager » du téléphone.
 // Changer ce nom vide l'ancien cache à la prochaine visite (à faire quand le manifeste ou les icônes changent).
-const CACHE = "twinschord-v7";
+const CACHE = "twinschord-v8";
 // Fichier reçu par « Partager », gardé le temps que l'application le lise (mêmes noms dans src/lib/installedApp.ts).
 const SHARED_CACHE = "twinschord-recu";
 const SHARED_KEY = "/__recu";
@@ -17,10 +17,10 @@ const SHELLS = [SHELL, "/", "/connexion"];
 // Fichiers hors de /_next/ dont la page a besoin sans réseau : manifeste, icônes, logo de l'en-tête.
 const EXTRA = [
   "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/icon-maskable-192.png",
-  "/icons/icon-maskable-512.png",
+  "/icons/icon-192.png?v=2",
+  "/icons/icon-512.png?v=2",
+  "/icons/icon-maskable-192.png?v=2",
+  "/icons/icon-maskable-512.png?v=2",
   "/icons/badge-96.png",
   "/logo/twinschord-logo-reverse.svg",
   "/logo/twinschord-mark-reverse.svg",

@@ -46,7 +46,14 @@ const Bar = memo(function Bar({ bar, active, onSeek }: BarProps) {
           <span className="beat-notes">
             {beat.tokens.map((token, i) => (
               <Fragment key={i}>
-                {i > 0 && <span className="tok-dot">.</span>}
+                {/* <wbr> : si les notes d'un temps ne tiennent pas dans la case, elles passent à la ligne
+                    après le point, au lieu de déborder sur la case voisine. */}
+                {i > 0 && (
+                  <>
+                    <span className="tok-dot">.</span>
+                    <wbr />
+                  </>
+                )}
                 <Token token={token} />
               </Fragment>
             ))}
