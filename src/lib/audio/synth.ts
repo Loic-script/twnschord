@@ -22,6 +22,8 @@ export interface ParsedChord {
   bass: number | null;
   /** Partie du nom qui suit la fondamentale : "m7", "sus4"… */
   suffix: string;
+  /** Durée propre à cet accord, en temps, écrite « G:2 » ; sinon la durée commune (SongOptions.beatsPerChord). */
+  beats?: number;
 }
 
 /** Le même accord, monté (ou descendu) de `semitones` demi-tons. */
@@ -124,27 +126,56 @@ export function parseChord(token: string): ParsedChord | null {
 }
 
 export const MAX_CHORDS = 64;
+/** Durée maximale d'un accord, en temps. */
+export const MAX_CHORD_BEATS = 16;
+
+export interface ParsedProgression {
+  chords: ParsedChord[];
+  errors: string[];
+  /** Position de chaque accord dans le texte, [début, fin[ : sert à réécrire sa durée. */
+  spans: [number, number][];
+}
 
 /**
  * Lit une suite d'accords : « C G Am F », « Do Sol Lam Fa », « Dm7 | G7 | Cmaj7 ».
  * Les accords sont séparés par des espaces, virgules ou barres ; « % » répète le précédent.
+ * « :n » après un accord lui donne n temps : « C G:2 D:2 ».
  */
-export function parseProgression(text: string): { chords: ParsedChord[]; errors: string[] } {
+export function parseProgression(text: string): ParsedProgression {
   const chords: ParsedChord[] = [];
   const errors: string[] = [];
-  for (const token of text.trim().split(/[\s,;|]+/)) {
-    if (!token || /^[-–—:.]+$/.test(token)) continue;
+  const spans: [number, number][] = [];
+  for (const match of text.matchAll(/[^\s,;|]+/g)) {
+    const token = match[0];
+    if (/^[-–—:.]+$/.test(token)) continue;
     if (chords.length >= MAX_CHORDS) break;
-    if (token === "%") {
-      if (chords.length > 0) chords.push(chords[chords.length - 1]);
-      else errors.push(token);
+    const timed = /^(.+?):(\d{1,2})$/.exec(token);
+    const name = timed ? timed[1] : token;
+    const beats = timed ? Math.max(1, Math.min(MAX_CHORD_BEATS, Number(timed[2]))) : undefined;
+    let chord: ParsedChord | null;
+    if (name === "%") {
+      const previous = chords[chords.length - 1];
+      chord = previous ? { ...previous, beats: undefined } : null;
+    } else {
+      chord = parseChord(name);
+    }
+    if (!chord) {
+      errors.push(token);
       continue;
     }
-    const chord = parseChord(token);
-    if (chord) chords.push(chord);
-    else errors.push(token);
+    chords.push(beats === undefined ? chord : { ...chord, beats });
+    spans.push([match.index, match.index + token.length]);
   }
-  return { chords, errors };
+  return { chords, errors, spans };
+}
+
+/**
+ * Le texte avec une nouvelle durée pour l'accord situé en `span` : « Am » devient « Am:2 ».
+ * `beats` null retire la durée propre (l'accord reprend la durée commune).
+ */
+export function withChordBeats(text: string, span: [number, number], beats: number | null): string {
+  const token = text.slice(span[0], span[1]).replace(/:\d{1,2}$/, "");
+  return text.slice(0, span[0]) + token + (beats === null ? "" : `:${beats}`) + text.slice(span[1]);
 }
 
 // ——— Arrangement ———
@@ -178,17 +209,41 @@ export interface SongOptions {
   chords: ParsedChord[];
   /** Battements par minute. */
   tempo: number;
-  /** Durée de chaque accord, en temps (mesure à 4 temps). */
-  beatsPerChord: 2 | 4;
+  /** Durée commune des accords, en temps ; un accord écrit « G:2 » garde la sienne. */
+  beatsPerChord: number;
+  /**
+   * Temps par mesure (le chiffre du haut de 4/4, 3/4, 6/8…), 4 par défaut. Les motifs de jeu, de basse
+   * et de batterie se répètent au rythme de la mesure.
+   */
+  beatsPerBar?: number;
   /**
    * Changement de tonalité, en demi-tons (−12 … +12) : accords, basse et mélodie
    * sont décalés ensemble. Les accords et la mélodie restent écrits dans leur tonalité d'origine.
    */
   transpose?: number;
   tracks: Track[];
+  /** Première voix de la mélodie. */
   melody?: MelodyOptions;
+  /** Voix suivantes (2ᵉ voix, 3ᵉ voix…), qui accompagnent la première. */
+  voices?: VoiceOptions[];
   sampleRate?: number;
 }
+
+/**
+ * Une voix qui accompagne la mélodie : en harmonie sous la voix précédente (notes de l'accord en
+ * cours, une tierce à une sixte plus bas, comme une 2ᵉ voix de chorale), ou écrite à la main.
+ */
+export interface VoiceOptions {
+  mode: "harmony" | "manual";
+  /** Notes écrites (mode "manual"), même écriture que la mélodie. */
+  text: string;
+  instrument: InstrumentId;
+  octave: number;
+  volume: number;
+}
+
+/** Nombre de voix au plus, mélodie comprise. */
+export const MAX_VOICES = 10;
 
 export const MAX_TRANSPOSE = 12;
 
@@ -205,8 +260,35 @@ export interface RenderedSong {
   sampleRate: number;
   /** Longueur de la suite d'accords elle-même, en échantillons (sans la résonance finale). */
   loopLength: number;
-  /** Durée d'un accord, en secondes. */
+  /** Durée commune d'un accord, en secondes. */
   chordDuration: number;
+  /** Début de chaque accord dans la boucle, en secondes. */
+  chordStarts: number[];
+}
+
+/** Durée de chaque accord, en temps : la sienne s'il en a une, sinon la durée commune. */
+export function chordLengths(chords: ParsedChord[], beatsPerChord: number): number[] {
+  const common = clamp(Math.round(beatsPerChord), 1, MAX_CHORD_BEATS * 2);
+  return chords.map((chord) => chord.beats ?? common);
+}
+
+const barOf = (options: SongOptions) => clamp(Math.round(options.beatsPerBar ?? 4), 1, 16);
+
+/**
+ * Longueur, en temps, sur laquelle se répète un motif de jeu, de basse ou de batterie. Les motifs
+ * sont écrits pour 4 temps : une mesure de 2 ou 3 temps en joue le début ; une mesure ternaire de 6,
+ * 9 ou 12 temps (6/8…) les enchaîne par groupes de 3 ; les autres, par groupes de 4.
+ */
+function patternCycle(beatsPerBar: number): number {
+  if (beatsPerBar <= 4) return beatsPerBar;
+  return beatsPerBar % 3 === 0 ? 3 : 4;
+}
+
+/** Découpe `length` temps en morceaux de `cycle` temps : [début, longueur]. */
+function segments(length: number, cycle: number): [number, number][] {
+  const out: [number, number][] = [];
+  for (let at = 0; at < length - 1e-9; at += cycle) out.push([at, Math.min(cycle, length - at)]);
+  return out;
 }
 
 export const MAX_TRACKS = 5;
@@ -262,12 +344,15 @@ function renderInstrument(out: Float32Array, sr: number, options: SongOptions, t
   const profile = PROFILES[id];
   const style = PLAY_STYLES.find((x) => x.id === track.style) ?? PLAY_STYLES[0];
   const shift = 12 * clamp(Math.round(track.octave), -2, 2);
-  const bpc = options.beatsPerChord;
+  const lengths = chordLengths(options.chords, options.beatsPerChord);
+  const cycle = patternCycle(barOf(options));
   const plucked = profile.engine === "pluck";
   const sustained = profile.engine === "blown";
+  let start = 0;
 
   options.chords.forEach((chord, index) => {
-    const t0 = index * bpc * beat;
+    const chordStart = start;
+    start += lengths[index];
     const low = placeAbove(chord.bass ?? chord.root, profile.low);
     const upper = tonesFrom(chord, profile.chord);
     let chordNotes: number[];
@@ -281,25 +366,29 @@ function renderInstrument(out: Float32Array, sr: number, options: SongOptions, t
       line = arpeggio(chordNotes);
     }
 
-    for (const step of style.steps) {
-      if (step.at >= bpc - 1e-9) continue;
-      const start = t0 + step.at * beat;
-      const length = Math.min(step.dur, bpc - step.at) * beat;
-      const dur = sustained ? Math.max(0.05, length - 0.03) : length;
-      for (const what of step.what) {
-        let notes: number[];
-        let gain = step.gain * track.volume;
-        if (what === "C") {
-          // À la guitare, le coup vers le haut ne prend que les cordes aiguës, dans l'autre sens.
-          notes = plucked && step.stroke === "u" ? chordNotes.slice(-4).reverse() : chordNotes;
-        } else if (typeof what === "number") {
-          notes = [line[what % line.length]];
-        } else {
-          notes = [low + (what === "L5" ? fifthOf(chord) : what === "L6" ? sixthOf(chord) : what === "L8" ? 12 : 0)];
-          gain *= 1.35;
+    // Le motif reprend au début de chaque cycle tant que l'accord dure.
+    for (const [offset, span] of segments(lengths[index], cycle)) {
+      const t0 = (chordStart + offset) * beat;
+      for (const step of style.steps) {
+        if (step.at >= span - 1e-9) continue;
+        const at = t0 + step.at * beat;
+        const length = Math.min(step.dur, span - step.at) * beat;
+        const dur = sustained ? Math.max(0.05, length - 0.03) : length;
+        for (const what of step.what) {
+          let notes: number[];
+          let gain = step.gain * track.volume;
+          if (what === "C") {
+            // À la guitare, le coup vers le haut ne prend que les cordes aiguës, dans l'autre sens.
+            notes = plucked && step.stroke === "u" ? chordNotes.slice(-4).reverse() : chordNotes;
+          } else if (typeof what === "number") {
+            notes = [line[what % line.length]];
+          } else {
+            notes = [low + (what === "L5" ? fifthOf(chord) : what === "L6" ? sixthOf(chord) : what === "L8" ? 12 : 0)];
+            gain *= 1.35;
+          }
+          const stagger = what === "C" ? profile.strum : 0;
+          notes.forEach((m, j) => playNote(out, sr, id, at + j * stagger, dur, fit(m + shift), gain, noise));
         }
-        const stagger = what === "C" ? profile.strum : 0;
-        notes.forEach((m, j) => playNote(out, sr, id, start + j * stagger, dur, fit(m + shift), gain, noise));
       }
     }
   });
@@ -308,44 +397,59 @@ function renderInstrument(out: Float32Array, sr: number, options: SongOptions, t
 function renderBass(out: Float32Array, sr: number, options: SongOptions, track: Track, beat: number, noise: Noise): void {
   const style = BASS_STYLES.find((x) => x.id === track.style) ?? BASS_STYLES[0];
   const shift = 12 * clamp(Math.round(track.octave), -2, 2);
-  const bpc = options.beatsPerChord;
+  const lengths = chordLengths(options.chords, options.beatsPerChord);
+  const cycle = patternCycle(barOf(options));
+  let start = 0;
   // Tessiture d'une basse quatre cordes : la fondamentale se place à partir du Mi grave.
   const rootOf = (chord: ParsedChord) => placeAbove(chord.bass ?? chord.root, 28);
   // La basse est jouée à part, puis passe dans son préampli avant d'être mélangée.
   const bus = new Float32Array(out.length);
 
   options.chords.forEach((chord, index) => {
-    const t0 = index * bpc * beat;
+    const chordStart = start;
+    start += lengths[index];
     const root = rootOf(chord);
     const next = options.chords[(index + 1) % options.chords.length];
     // Sur un accord à basse imposée (C/E), la basse ne quitte pas cette note.
     const free = chord.bass === null;
     const third = chord.intervals.find((iv) => iv === 3 || iv === 4) ?? chord.intervals.find((iv) => iv === 2 || iv === 5) ?? 7;
     const seventh = chord.intervals.includes(11) ? 11 : 10;
-    for (const [at, dur, token, gain] of style.steps) {
-      if (at >= bpc - 1e-9) continue;
-      let midi = root;
-      if (token === "8") midi = root + 12;
-      else if (token === "A") midi = rootOf(next) - 1;
-      else if (free) {
-        if (token === "3") midi = root + third;
-        else if (token === "5") midi = root + fifthOf(chord);
-        else if (token === "6") midi = root + sixthOf(chord);
-        else if (token === "7") midi = root + seventh;
+    const parts = segments(lengths[index], cycle);
+    parts.forEach(([offset, span], part) => {
+      const t0 = (chordStart + offset) * beat;
+      // La note d'approche (« A ») mène à l'accord suivant : seulement dans le dernier cycle de l'accord.
+      const last = part === parts.length - 1;
+      for (const [at, dur, token, gain] of style.steps) {
+        if (at >= span - 1e-9) continue;
+        let midi = root;
+        if (token === "8") midi = root + 12;
+        else if (token === "A") midi = last ? rootOf(next) - 1 : root + fifthOf(chord);
+        else if (free) {
+          if (token === "3") midi = root + third;
+          else if (token === "5") midi = root + fifthOf(chord);
+          else if (token === "6") midi = root + sixthOf(chord);
+          else if (token === "7") midi = root + seventh;
+        }
+        addBass(bus, sr, t0 + at * beat, Math.min(dur, span - at) * beat, fit(midi + shift, 23, 72), gain, noise);
       }
-      addBass(bus, sr, t0 + at * beat, Math.min(dur, bpc - at) * beat, fit(midi + shift, 23, 72), gain, noise);
-    }
+    });
   });
   mixBass(out, bus, 0.6 * track.volume);
 }
 
 function renderDrums(out: Float32Array, sr: number, options: SongOptions, track: Track, beat: number, noise: Noise): void {
   const style = DRUM_STYLES.find((x) => x.id === track.style) ?? DRUM_STYLES[0];
-  const totalBeats = options.chords.length * options.beatsPerChord;
-  for (let bar = 0; bar < totalBeats; bar += 4) {
-    for (const [at, sound, gain] of style.hits) {
-      if (bar + at >= totalBeats - 1e-9) continue;
-      playDrum(out, sr, sound, (bar + at) * beat, gain * track.volume, noise);
+  const totalBeats = chordLengths(options.chords, options.beatsPerChord).reduce((sum, n) => sum + n, 0);
+  const bar = barOf(options);
+  const cycle = patternCycle(bar);
+  // Le rythme suit la mesure (et non les accords) : il recommence à chaque mesure, par cycles.
+  for (let barStart = 0; barStart < totalBeats - 1e-9; barStart += bar) {
+    for (const [offset, span] of segments(bar, cycle)) {
+      for (const [at, sound, gain] of style.hits) {
+        const when = barStart + offset + at;
+        if (at >= span - 1e-9 || when >= totalBeats - 1e-9) continue;
+        playDrum(out, sr, sound, when * beat, gain * track.volume, noise);
+      }
     }
   }
 }
@@ -361,12 +465,18 @@ export function melodyNotes(options: SongOptions): { notes: MelodyNote[]; errors
   // La mélodie est pensée dans la tonalité d'origine, puis décalée avec les accords :
   // changer de tonalité ne change donc pas son dessin.
   const shift = transposeOf(options);
+  const lengths = chordLengths(options.chords, options.beatsPerChord);
   if (melody.mode === "auto") {
-    const generated = generateMelody(options.chords, options.beatsPerChord, melody.seed, base);
+    const generated = generateMelody(options.chords, lengths, melody.seed, base);
     return { notes: generated.map((note) => ({ ...note, midi: note.midi + shift })), errors: [] };
   }
   const parsed = parseMelody(melody.text, solfaDoOf(options.chords), base);
-  const totalBeats = options.chords.length * options.beatsPerChord;
+  const totalBeats = lengths.reduce((sum, n) => sum + n, 0);
+  return { notes: repeatOver(parsed, totalBeats, shift), errors: parsed.errors };
+}
+
+/** Une mélodie écrite, répétée jusqu'à couvrir `totalBeats` temps, et décalée de `shift` demi-tons. */
+function repeatOver(parsed: { notes: MelodyNote[]; beats: number }, totalBeats: number, shift: number): MelodyNote[] {
   const notes: MelodyNote[] = [];
   if (parsed.beats > 0 && parsed.notes.length > 0) {
     for (let offset = 0; offset < totalBeats - 1e-9; offset += parsed.beats) {
@@ -377,14 +487,208 @@ export function melodyNotes(options: SongOptions): { notes: MelodyNote[]; errors
       }
     }
   }
-  return { notes, errors: parsed.errors };
+  return notes;
+}
+
+/** Voix effectivement jouées : la mélodie (si elle existe), puis les voix suivantes. */
+export function voicesOf(options: SongOptions): { instrument: InstrumentId; volume: number }[] {
+  const melody = options.melody && options.melody.mode !== "none" ? [options.melody] : [];
+  return [...melody, ...(options.voices ?? []).slice(0, MAX_VOICES - 1)];
+}
+
+/**
+ * Notes de chaque voix, dans l'ordre de voicesOf : la mélodie, puis chaque voix suivante, en
+ * harmonie sous la précédente ou écrite à la main.
+ */
+export function voiceNotes(options: SongOptions): { notes: MelodyNote[]; errors: string[] }[] {
+  const lists: { notes: MelodyNote[]; errors: string[] }[] = [];
+  const hasMelody = Boolean(options.melody && options.melody.mode !== "none" && options.chords.length > 0);
+  if (options.melody && options.melody.mode !== "none") lists.push(hasMelody ? melodyNotes(options) : { notes: [], errors: [] });
+  if (options.chords.length === 0) return [...lists, ...(options.voices ?? []).slice(0, MAX_VOICES - 1).map(() => ({ notes: [], errors: [] }))];
+
+  const shift = transposeOf(options);
+  const lengths = chordLengths(options.chords, options.beatsPerChord);
+  const totalBeats = lengths.reduce((sum, n) => sum + n, 0);
+  // Accords entendus (tonalité appliquée) et leur début, en temps : pour l'harmonie.
+  const heard = heardChords(options.chords, shift);
+  const starts: number[] = [];
+  lengths.reduce((at, n) => (starts.push(at), at + n), 0);
+  const chordAt = (beat: number) => {
+    let i = 0;
+    while (i + 1 < starts.length && starts[i + 1] <= beat + 1e-9) i++;
+    return heard[i];
+  };
+
+  for (const voice of (options.voices ?? []).slice(0, MAX_VOICES - 1)) {
+    const octave = 12 * clamp(Math.round(voice.octave), -2, 2);
+    if (voice.mode === "manual") {
+      const parsed = parseMelody(voice.text, solfaDoOf(options.chords), MELODY_BASE + octave);
+      lists.push({ notes: repeatOver(parsed, totalBeats, shift), errors: parsed.errors });
+      continue;
+    }
+    // Harmonie : sous chaque note de la voix précédente, la note de l'accord en cours la plus proche,
+    // d'une tierce à une sixte plus bas ; à défaut, la même note une octave plus bas.
+    const above = lists[lists.length - 1]?.notes ?? [];
+    const notes = above.map((note) => {
+      const chord = chordAt(note.at);
+      const classes = new Set(chord.intervals.map((iv) => (chord.root + iv) % 12));
+      let midi = note.midi - 12;
+      for (let down = 3; down <= 9; down++) {
+        const m = note.midi - down;
+        if (classes.has(((m % 12) + 12) % 12)) {
+          midi = m;
+          break;
+        }
+      }
+      return { ...note, midi: midi + octave };
+    });
+    lists.push({ notes, errors: [] });
+  }
+  return lists;
+}
+
+/** Les notes d'une voix, jouées dans `out`. */
+function renderVoice(out: Float32Array, sr: number, instrument: InstrumentId, notes: MelodyNote[], volume: number, beat: number, noise: Noise): void {
+  for (const note of notes) {
+    playNote(out, sr, instrument, note.at * beat, Math.max(0.05, note.dur * beat - 0.02), fit(note.midi, 36, 100), 1.7 * volume, noise);
+  }
+}
+
+/** Durée et découpage d'un morceau : longueur de la boucle, début de chaque accord. */
+function layout(options: SongOptions) {
+  const sr = options.sampleRate ?? 44100;
+  const beat = 60 / clamp(options.tempo, 40, 220);
+  const lengths = chordLengths(options.chords, options.beatsPerChord);
+  const chordStarts: number[] = [];
+  let total = 0;
+  for (const length of lengths) {
+    chordStarts.push(total * beat);
+    total += length;
+  }
+  const loopLength = Math.round(total * beat * sr);
+  return { sr, beat, chordStarts, loopLength, length: loopLength + Math.round(1.5 * sr), chordDuration: beat * options.beatsPerChord };
+}
+
+export interface SongStems {
+  /**
+   * Un signal par piste (dans l'ordre de `tracks`, toutes, même muettes), puis un par voix (la
+   * mélodie si elle existe, puis les voix suivantes). Chacun est rendu au volume 1 et non normalisé :
+   * le volume de chaque piste s'applique au mélange, ce qui permet de le changer sans recalcul.
+   */
+  stems: Float32Array[];
+  sampleRate: number;
+  loopLength: number;
+  chordDuration: number;
+  chordStarts: number[];
+  /** Durée d'un temps, en secondes. */
+  beatSeconds: number;
+}
+
+/** Le morceau rendu piste par piste, pour un mélange en direct (volume, muet) sans recalcul. */
+export function renderStems(options: SongOptions): SongStems {
+  const { sr, beat, chordStarts, loopLength, length, chordDuration } = layout(options);
+  const noise = new Noise(20261121);
+  const heard: SongOptions = { ...options, chords: heardChords(options.chords, transposeOf(options)) };
+  const stems: Float32Array[] = [];
+  for (const track of options.tracks.slice(0, MAX_TRACKS)) {
+    const out = new Float32Array(length);
+    const unit = { ...track, volume: 1 };
+    if (track.instrument === "drums") renderDrums(out, sr, heard, unit, beat, noise);
+    else if (track.instrument === "bass") renderBass(out, sr, heard, unit, beat, noise);
+    else renderInstrument(out, sr, heard, unit, beat, noise);
+    stems.push(out);
+  }
+  const lists = voiceNotes(options);
+  voicesOf(options).forEach((voice, k) => {
+    const out = new Float32Array(length);
+    renderVoice(out, sr, voice.instrument, lists[k]?.notes ?? [], 1, beat, noise);
+    stems.push(out);
+  });
+  return { stems, sampleRate: sr, loopLength, chordDuration, chordStarts, beatSeconds: beat };
+}
+
+/** Ce qui définit le morceau lui-même, sans ses pistes : accords, tempo, mesure, tonalité. */
+export type SongFrame = Pick<SongOptions, "chords" | "tempo" | "beatsPerChord" | "beatsPerBar" | "transpose" | "sampleRate">;
+
+/** Découpage du morceau : longueur de la boucle (en échantillons), début de chaque accord (en secondes). */
+export function songLayout(frame: SongFrame): Omit<SongStems, "stems"> & { length: number } {
+  const { sr, beat, chordStarts, loopLength, length, chordDuration } = layout({ ...frame, tracks: [] });
+  return { sampleRate: sr, loopLength, length, chordDuration, chordStarts, beatSeconds: beat };
+}
+
+/**
+ * Une seule piste d'accompagnement, rendue seule au volume 1. Son aléa (`seed`) lui est propre :
+ * elle ne dépend d'aucune autre piste, ce qui permet de la calculer à part — en parallèle, ou seule
+ * quand on ne change qu'elle.
+ */
+export function renderTrackStem(frame: SongFrame, track: Track, seed: number): Float32Array {
+  const options: SongOptions = { ...frame, tracks: [] };
+  const { sr, beat, length } = layout(options);
+  const out = new Float32Array(length);
+  const heard: SongOptions = { ...options, chords: heardChords(frame.chords, transposeOf(options)) };
+  const unit = { ...track, volume: 1 };
+  const noise = new Noise(seed);
+  if (track.instrument === "drums") renderDrums(out, sr, heard, unit, beat, noise);
+  else if (track.instrument === "bass") renderBass(out, sr, heard, unit, beat, noise);
+  else renderInstrument(out, sr, heard, unit, beat, noise);
+  return out;
+}
+
+/** Une seule voix (notes déjà calculées par voiceNotes), rendue seule au volume 1. */
+export function renderVoiceStem(frame: SongFrame, instrument: InstrumentId, notes: MelodyNote[], seed: number): Float32Array {
+  const { sr, beat, length } = layout({ ...frame, tracks: [] });
+  const out = new Float32Array(length);
+  renderVoice(out, sr, instrument, notes, 1, beat, new Noise(seed));
+  return out;
+}
+
+/**
+ * Mélange des pistes avec leur volume (0 = muette), puis mise à niveau : `scale` fixe donne
+ * exactement le niveau entendu en direct ; sans lui, le mélange est normalisé.
+ */
+export function mixStems(stems: Float32Array[], gains: number[], scale?: number): Float32Array {
+  const out = new Float32Array(stems[0]?.length ?? 0);
+  stems.forEach((stem, k) => {
+    const g = gains[k] ?? 1;
+    if (g === 0) return;
+    for (let i = 0; i < stem.length; i++) out[i] += g * stem[i];
+  });
+  if (scale === undefined) {
+    normalize(out);
+  } else {
+    for (let i = 0; i < out.length; i++) out[i] *= scale;
+    // Garde-fou : jamais de saturation dans le fichier.
+    let peak = 0;
+    for (let i = 0; i < out.length; i++) peak = Math.max(peak, Math.abs(out[i]));
+    if (peak > 0.98) normalize(out, 0.95);
+  }
+  return out;
+}
+
+/** Niveau qui amène le mélange de toutes les pistes, au volume 1, à la hauteur habituelle. */
+export function stemsScale(stems: Float32Array[]): number {
+  const length = stems[0]?.length ?? 0;
+  let peak = 0;
+  for (let i = 0; i < length; i++) {
+    let sum = 0;
+    for (const stem of stems) sum += stem[i];
+    peak = Math.max(peak, Math.abs(sum));
+  }
+  return peak <= 1e-9 ? 1 : 0.89 / peak;
 }
 
 export function renderSong(options: SongOptions): RenderedSong {
   const sr = options.sampleRate ?? 44100;
   const beat = 60 / clamp(options.tempo, 40, 220);
   const chordDuration = beat * options.beatsPerChord;
-  const loopLength = Math.round(options.chords.length * chordDuration * sr);
+  const lengths = chordLengths(options.chords, options.beatsPerChord);
+  const chordStarts: number[] = [];
+  let total = 0;
+  for (const length of lengths) {
+    chordStarts.push(total * beat);
+    total += length;
+  }
+  const loopLength = Math.round(total * beat * sr);
   const out = new Float32Array(loopLength + Math.round(1.5 * sr));
   const noise = new Noise(20261121);
 
@@ -403,9 +707,17 @@ export function renderSong(options: SongOptions): RenderedSong {
       playNote(out, sr, melody.instrument, note.at * beat, Math.max(0.05, note.dur * beat - 0.02), fit(note.midi, 36, 100), 1.7 * melody.volume, noise);
     }
   }
+  // Voix suivantes (2ᵉ voix…).
+  if (options.voices && options.voices.length > 0) {
+    const lists = voiceNotes(options);
+    const first = melody && melody.mode !== "none" ? 1 : 0;
+    options.voices.slice(0, MAX_VOICES - 1).forEach((voice, k) => {
+      if (voice.volume > 0) renderVoice(out, sr, voice.instrument, lists[first + k]?.notes ?? [], voice.volume, beat, noise);
+    });
+  }
 
   normalize(out);
-  return { samples: out, sampleRate: sr, loopLength, chordDuration };
+  return { samples: out, sampleRate: sr, loopLength, chordDuration, chordStarts };
 }
 
 function normalize(samples: Float32Array, target = 0.89): void {

@@ -11,6 +11,15 @@ import {
   parseChord,
   parseProgression,
   renderSong,
+  chordLengths,
+  mixStems,
+  renderStems,
+  stemsScale,
+  voiceNotes,
+  renderTrackStem,
+  renderVoiceStem,
+  songLayout,
+  withChordBeats,
   type MelodyOptions,
   type SongOptions,
   type Track,
@@ -470,5 +479,217 @@ describe("boucle et export", () => {
 
   it("donne exactement le même son à chaque rendu", () => {
     expect(Array.from(renderSong(options).samples.subarray(0, 2000))).toEqual(Array.from(rendered.samples.subarray(0, 2000)));
+  });
+});
+
+describe("durée de chaque accord et mesure", () => {
+  it("lit la durée propre d'un accord, écrite « :n », et garde sa position dans le texte", () => {
+    const text = "C G:2 Do:3 %:1 Am";
+    const parsed = parseProgression(text);
+    expect(parsed.chords.map((c) => c.label)).toEqual(["C", "G", "C", "C", "Am"]);
+    expect(parsed.chords.map((c) => c.beats)).toEqual([undefined, 2, 3, 1, undefined]);
+    expect(parsed.spans.map(([a, b]) => text.slice(a, b))).toEqual(["C", "G:2", "Do:3", "%:1", "Am"]);
+    expect(parsed.errors).toEqual([]);
+    // « % » répète l'accord, pas sa durée.
+    expect(parseProgression("G:2 %").chords.map((c) => c.beats)).toEqual([2, undefined]);
+    // Durée bornée de 1 à 16 temps ; « :0 » vaut 1.
+    expect(parseProgression("C:0 G:99").chords.map((c) => c.beats)).toEqual([1, 16]);
+  });
+
+  it("réécrit la durée d'un accord dans le texte, ou la retire", () => {
+    const text = "C  G:2 Am | F";
+    const { spans } = parseProgression(text);
+    expect(withChordBeats(text, spans[2], 3)).toBe("C  G:2 Am:3 | F");
+    expect(withChordBeats(text, spans[1], 4)).toBe("C  G:4 Am | F");
+    expect(withChordBeats(text, spans[1], null)).toBe("C  G Am | F");
+  });
+
+  it("chaque accord dure sa propre durée, ou la durée commune", () => {
+    const chords = chordsOf("C G:2 Am F:1");
+    expect(chordLengths(chords, 4)).toEqual([4, 2, 4, 1]);
+    expect(chordLengths(chords, 3)).toEqual([3, 2, 3, 1]);
+    const rendered = renderSong(song({ chords, tempo: 120, tracks: [track("piano", "pop")] }));
+    // 11 temps à 120 bpm = 5,5 s ; chaque accord commence où finit le précédent.
+    expect(rendered.loopLength).toBe(Math.round(5.5 * 22050));
+    expect(rendered.chordStarts).toEqual([0, 2, 3, 5]);
+  });
+
+  for (const [meter, beatsPerBar] of [["3/4", 3], ["6/8", 6], ["5/4", 5], ["2/4", 2], ["1/4", 1], ["12/8", 12]] as const) {
+    it(`en ${meter}, tout se joue, sans saturation, et la boucle dure le bon nombre de temps`, () => {
+      const tracks = [track("piano", "pop"), track("guitar", "strum"), track("bass", "walking"), track("drums", "rock")];
+      const rendered = renderSong(song({ chords: chordsOf("C G Am F"), tempo: 120, beatsPerChord: beatsPerBar, beatsPerBar, tracks, melody: melody({ mode: "auto", seed: 3 }) }));
+      expect(rendered.loopLength).toBe(Math.round(4 * beatsPerBar * 0.5 * 22050));
+      const { peak, finite } = peakOf(rendered.samples);
+      expect(finite).toBe(true);
+      expect(peak).toBeGreaterThan(0.1);
+      expect(peak).toBeLessThanOrEqual(0.9);
+    });
+  }
+
+  it("en 3/4, rien ne sonne dans un temps qui n'existe pas : la boucle se termine avec la dernière mesure", () => {
+    // Batterie seule : chaque mesure de 3 temps ne reprend que les coups des 3 premiers temps du motif.
+    const rendered = renderSong(song({ chords: chordsOf("C"), tempo: 60, beatsPerChord: 3, beatsPerBar: 3, sampleRate: 22050, tracks: [track("drums", "pop")] }));
+    expect(rendered.loopLength).toBe(3 * 22050);
+  });
+
+  it("la mélodie générée couvre exactement chaque accord, même de durée impaire", () => {
+    const chords = chordsOf("C G:3 Am:1 F");
+    const lengths = chordLengths(chords, 4);
+    const notes = generateMelody(chords, lengths, 5);
+    const total = lengths.reduce((a, b) => a + b, 0);
+    const end = Math.max(...notes.map((n) => n.at + n.dur));
+    expect(end).toBeCloseTo(total, 6);
+    // Aucune note ne chevauche la frontière entre deux accords.
+    const bounds = [4, 7, 8];
+    for (const note of notes) for (const b of bounds) expect(note.at < b - 1e-9 && note.at + note.dur > b + 1e-9).toBe(false);
+  });
+
+  it("le texte de la mélodie place une barre à chaque mesure", () => {
+    const chords = chordsOf("C G");
+    const text = melodyToText(generateMelody(chords, 3, 2), 6, "latin", undefined, 3);
+    expect(text.split("|").length).toBe(2);
+    expect(text.split("|")[0].trim().split(" ").length).toBe(3);
+  });
+});
+
+describe("pistes séparées, pour le mélange en direct", () => {
+  const tracks = [track("piano", "pop", 0, 0.5), track("bass", "walking", 0, 1.5), track("drums", "rock")];
+  const options = song({ chords: chordsOf("C G:2 Am F"), tracks, melody: melody({ mode: "auto", seed: 4 }) });
+  const stems = renderStems(options);
+
+  it("une piste par instrument et une par voix, toutes de la même longueur", () => {
+    expect(stems.stems.length).toBe(4);
+    expect(new Set(stems.stems.map((s) => s.length)).size).toBe(1);
+    expect(stems.loopLength).toBe(renderSong(options).loopLength);
+    expect(stems.chordStarts).toEqual(renderSong(options).chordStarts);
+  });
+
+  it("mélangées avec leur volume, elles redonnent exactement le morceau complet", () => {
+    const whole = renderSong(options).samples;
+    const mixed = mixStems(stems.stems, [0.5, 1.5, 1, 1]);
+    let worst = 0;
+    for (let i = 0; i < whole.length; i++) worst = Math.max(worst, Math.abs(whole[i] - mixed[i]));
+    expect(worst).toBeLessThan(1e-5);
+  });
+
+  it("une piste muette ne s'entend plus, les autres gardent leur niveau", () => {
+    const scale = stemsScale(stems.stems);
+    const all = mixStems(stems.stems, [1, 1, 1, 1], scale);
+    const noDrums = mixStems(stems.stems, [1, 1, 0, 1], scale);
+    const onlyDrums = mixStems(stems.stems, [0, 0, 1, 0], scale);
+    let worst = 0;
+    for (let i = 0; i < all.length; i++) worst = Math.max(worst, Math.abs(all[i] - noDrums[i] - onlyDrums[i]));
+    expect(worst).toBeLessThan(1e-5);
+    expect(peakOf(all).peak).toBeCloseTo(0.89, 5);
+  });
+});
+
+describe("voix qui accompagnent la mélodie", () => {
+  const chords = chordsOf("C F G C");
+  const voice = (over: Partial<{ mode: "harmony" | "manual"; text: string; octave: number; volume: number }>) => ({ mode: "harmony" as const, text: "", instrument: "strings" as const, octave: 0, volume: 1, ...over });
+
+  it("la 2ᵉ voix en harmonie chante une note de l'accord, d'une tierce à une sixte sous la 1ʳᵉ", () => {
+    const options = song({ chords, melody: melody({ mode: "auto", seed: 3 }), voices: [voice({}), voice({})] });
+    const [first, second, third] = voiceNotes(options);
+    expect(second.notes.length).toBe(first.notes.length);
+    const lengths = chordLengths(chords, 4);
+    second.notes.forEach((note, k) => {
+      const above = first.notes[k];
+      const gap = above.midi - note.midi;
+      const chord = chords[Math.min(chords.length - 1, Math.floor(note.at / lengths[0]))];
+      const classes = chord.intervals.map((iv) => (chord.root + iv) % 12);
+      expect(note.at).toBe(above.at);
+      expect(gap === 12 || (gap >= 3 && gap <= 9 && classes.includes(((note.midi % 12) + 12) % 12))).toBe(true);
+    });
+    // La 3ᵉ voix se place sous la 2ᵉ.
+    third.notes.forEach((note, k) => expect(note.midi).toBeLessThan(second.notes[k].midi));
+  });
+
+  it("une voix écrite à la main se lit comme la mélodie, et se répète sur tout le morceau", () => {
+    const options = song({ chords, melody: melody({ mode: "manual", text: "mi - - -" }), voices: [voice({ mode: "manual", text: "do - sol -" })] });
+    const [, written] = voiceNotes(options);
+    expect(written.errors).toEqual([]);
+    expect(written.notes.length).toBe(8);
+    expect(written.notes[0].midi % 12).toBe(0);
+    expect(written.notes[1].midi % 12).toBe(7);
+  });
+
+  it("jusqu'à 10 voix s'entendent, sans saturation", () => {
+    const voices = Array.from({ length: 12 }, (_, k) => voice({ octave: k % 2 ? -1 : 0 }));
+    const options = song({ chords, tracks: [track("piano", "block")], melody: melody({ mode: "auto", seed: 1 }), voices });
+    const stems = renderStems(options);
+    expect(stems.stems.length).toBe(1 + 10);
+    const rendered = renderSong(options);
+    const { peak, finite } = peakOf(rendered.samples);
+    expect(finite).toBe(true);
+    expect(peak).toBeLessThanOrEqual(0.9);
+    const without = renderSong(song({ chords, tracks: [track("piano", "block")], melody: melody({ mode: "auto", seed: 1 }) }));
+    expect(Array.from(rendered.samples.subarray(0, 8000))).not.toEqual(Array.from(without.samples.subarray(0, 8000)));
+  });
+});
+
+describe("une piste calculée seule (calcul en parallèle, hors de la page)", () => {
+  const frame = { chords: chordsOf("C G:2 Am F"), tempo: 120, beatsPerChord: 4, beatsPerBar: 4, transpose: 0, sampleRate: 22050 };
+
+  it("même réglage, même aléa : exactement le même son ; elle a la longueur du morceau", () => {
+    const a = renderTrackStem(frame, track("guitar", "strum"), 1234);
+    const b = renderTrackStem(frame, track("guitar", "strum"), 1234);
+    expect(Array.from(a)).toEqual(Array.from(b));
+    expect(a.length).toBe(songLayout(frame).length);
+    expect(peakOf(a).peak).toBeGreaterThan(0.01);
+  });
+
+  it("une voix calculée seule joue ses notes, à la hauteur demandée", () => {
+    const notes = [{ at: 0, dur: 2, midi: 69 }];
+    const stem = renderVoiceStem({ ...frame, chords: chordsOf("A"), tempo: 60, sampleRate: 44100 }, "organ", notes, 7);
+    expect(Math.abs(pitchAt(stem, 44100) - 69)).toBeLessThan(0.3);
+  });
+
+  it("le découpage du morceau est le même que celui du rendu complet", () => {
+    const whole = renderSong(song({ chords: frame.chords, tempo: 120, tracks: [track("piano", "pop")] }));
+    const layout = songLayout(frame);
+    expect(layout.loopLength).toBe(whole.loopLength);
+    expect(layout.chordStarts).toEqual(whole.chordStarts);
+  });
+});
+
+describe("solfa en syllabes (do re mi fa so la ti)", () => {
+  // En Do majeur (do = Do), à partir de la tessiture habituelle de la mélodie.
+  const read = (text: string, doPc = 0) => parseMelody(text, doPc);
+  const pcs = (text: string, doPc = 0) => read(text, doPc).notes.map((n) => ((n.midi % 12) + 12) % 12);
+
+  it("lit la voix de la capture : so so so do ti ti ti re di di ti ti so", () => {
+    const parsed = read("so so so do ti ti ti re di di ti ti so");
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.notes.length).toBe(13);
+    expect(pcs("so so so do ti ti ti re di di ti ti so")).toEqual([7, 7, 7, 0, 11, 11, 11, 2, 1, 1, 11, 11, 7]);
+  });
+
+  it("do mobile : en Sol majeur, do = Sol et so = Ré", () => {
+    expect(pcs("do re mi fa so la ti", 7)).toEqual([7, 9, 11, 0, 2, 4, 6]);
+  });
+
+  it("dièses en « i », bémols en « a » ou « e », et marques d'octave", () => {
+    expect(pcs("so di ri fi si li ra me se le te ta")).toEqual([7, 1, 3, 6, 8, 10, 1, 3, 6, 8, 10, 10]);
+    // « do' » : une octave au-dessus de « do » ; « do, » : une octave au-dessous.
+    const [so, doUp, doMid, doDown] = read("so do' do do,").notes.map((n) => n.midi);
+    expect(so % 12).toBe(7);
+    expect(doUp - doMid).toBe(12);
+    expect(doMid - doDown).toBe(12);
+  });
+
+  it("un texte sans syllabe propre au solfa reste lu en noms fixes (sol, si = Si)", () => {
+    expect(pcs("do ré mi fa sol la si", 7)).toEqual([0, 2, 4, 5, 7, 9, 11]);
+  });
+
+  it("une voix écrite en syllabes s'entend comme la mélodie", () => {
+    const chords = chordsOf("C G Am F");
+    const voice = { mode: "manual" as const, text: "so so so do ti ti ti re di di ti ti so", instrument: "piano" as const, octave: 0, volume: 1.3 };
+    const options = song({ chords, melody: melody({ mode: "manual", text: "mi mi mi do re re re fa mi mi re re do" }), voices: [voice] });
+    const [first, second] = voiceNotes(options);
+    expect(second.errors).toEqual([]);
+    expect(second.notes.length).toBe(first.notes.length);
+    const stems = renderStems(options);
+    expect(peakOf(stems.stems[1]).peak).toBeGreaterThan(0.05);
   });
 });

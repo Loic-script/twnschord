@@ -1150,33 +1150,40 @@ button {
 /* Barre de défilement aux couleurs de l'application : fine, arrondie, sans flèches, posée sur un
    rail transparent qui s'arrête avant les coins arrondis du cadre ; elle s'éclaircit au survol et
    passe au jaune quand on la tient. (Chrome, Edge, Safari.) */
-.sheet::-webkit-scrollbar {
+.sheet::-webkit-scrollbar,
+.sel-list::-webkit-scrollbar {
   width: 14px;
   height: 14px;
 }
 
-.sheet::-webkit-scrollbar-track {
+.sheet::-webkit-scrollbar-track,
+.sel-list::-webkit-scrollbar-track {
   margin-block: 12px;
   background: transparent;
 }
 
-.sheet::-webkit-scrollbar-thumb {
+.sheet::-webkit-scrollbar-thumb,
+.sel-list::-webkit-scrollbar-thumb {
   min-height: 48px;
   border: 4px solid transparent;
   border-radius: 999px;
   background: rgba(238, 245, 242, 0.2) padding-box;
 }
 
-.sheet::-webkit-scrollbar-thumb:hover {
+.sheet::-webkit-scrollbar-thumb:hover,
+.sel-list::-webkit-scrollbar-thumb:hover {
   background-color: rgba(238, 245, 242, 0.38);
 }
 
-.sheet::-webkit-scrollbar-thumb:active {
+.sheet::-webkit-scrollbar-thumb:active,
+.sel-list::-webkit-scrollbar-thumb:active {
   background-color: var(--accent);
 }
 
 .sheet::-webkit-scrollbar-button,
-.sheet::-webkit-scrollbar-corner {
+.sheet::-webkit-scrollbar-corner,
+.sel-list::-webkit-scrollbar-button,
+.sel-list::-webkit-scrollbar-corner {
   display: none;
   background: transparent;
 }
@@ -1184,7 +1191,8 @@ button {
 /* Firefox, qui ne connaît pas les règles ci-dessus : barre fine aux mêmes couleurs. (Réservé à lui :
    dans Chrome, ces deux propriétés feraient ignorer le style détaillé.) */
 @supports not selector(::-webkit-scrollbar) {
-  .sheet {
+  .sheet,
+  .sel-list {
     scrollbar-width: thin;
     scrollbar-color: rgba(238, 245, 242, 0.3) transparent;
   }
@@ -1426,12 +1434,40 @@ button {
   gap: 6px;
 }
 
+/* Un accord de la suite : un bouton (nom, un point par temps, crayon) qui ouvre le menu de durée. */
 .prog-chord {
-  min-width: 58px;
-  padding: 8px 12px 9px;
+  position: relative;
+}
+
+.prog-btn {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 64px;
+  min-height: 52px;
+  padding: 7px 10px 7px 12px;
+  border: 0;
   border-left: 2px solid var(--ink);
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 10px 10px 0;
   background: var(--tint);
+  color: var(--ink);
+  text-align: left;
+  transition:
+    background-color 160ms ease,
+    transform 140ms ease;
+}
+
+.prog-btn:hover {
+  background: rgba(238, 245, 242, 0.14);
+}
+
+.prog-btn:active {
+  transform: scale(0.97);
+}
+
+.prog-name {
+  grid-column: 1;
   font-family: var(--display);
   font-size: 22px;
   font-weight: 700;
@@ -1440,12 +1476,175 @@ button {
   white-space: nowrap;
 }
 
-.prog-chord .suffix {
+.prog-name .suffix {
   font-size: 0.68em;
 }
 
-.prog-chord[data-active] {
+/* Un point par temps : la durée se lit d'un coup d'œil. */
+.prog-beats {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 56px;
+}
+
+.prog-beats i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+.prog-beats b {
+  font-family: var(--mono);
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.prog-edit {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 14px;
+  height: 14px;
+  opacity: 0.4;
+  transition: opacity 160ms ease;
+}
+
+.prog-btn:hover .prog-edit,
+.prog-chord[data-open] .prog-edit {
+  opacity: 1;
+}
+
+/* Durée propre : liseré jaune à gauche, points jaunes. */
+.prog-chord[data-custom] .prog-btn {
+  border-left-color: var(--accent);
+}
+
+.prog-chord[data-custom] .prog-beats i {
+  background: var(--accent);
+  opacity: 1;
+}
+
+.prog-chord[data-active] .prog-btn {
   background: var(--brass-bright);
+  color: var(--on-accent);
+}
+
+.prog-chord[data-active] .prog-beats i {
+  background: var(--on-accent);
+}
+
+.prog-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 236px;
+  padding: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: var(--raise);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+  transform-origin: top left;
+  animation: sel-in 190ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+.prog-menu[data-align="end"] {
+  right: 0;
+  left: auto;
+  transform-origin: top right;
+}
+
+.prog-menu-title {
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.prog-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+}
+
+.prog-option .prog-beats {
+  width: 44px;
+  max-width: none;
+}
+
+.prog-option:hover,
+.prog-option:focus-visible {
+  outline: none;
+  background: rgba(238, 245, 242, 0.08);
+}
+
+.prog-option[aria-checked="true"] {
+  color: var(--accent);
+}
+
+.prog-option[aria-checked="true"]::after {
+  content: "✓";
+  margin-left: auto;
+}
+
+.prog-option-common {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 10px 10px;
+  font-size: 14px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* La mesure écrite comme sur une partition : le nombre de temps au-dessus de l'unité. */
+.meter-sign {
+  display: inline-grid;
+  justify-items: center;
+  min-width: 34px;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 0.92;
+  color: var(--accent);
+}
+
+.meter-sign b + b {
+  border-top: 2px solid currentColor;
+  padding-top: 2px;
+}
+
+/* Le chiffrage reste à gauche des mesures proposées, même sur téléphone. */
+.option-row:has(> .meter-sign) {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.option-row > .meter-sign + .seg-wrap {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.meter-custom .seg-btn small {
+  font-family: var(--mono);
+  font-size: 0.8em;
+  opacity: 0.7;
 }
 
 .options {
@@ -1496,6 +1695,171 @@ button {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* Piste ou voix muette : elle reste réglable, mais s'efface visuellement. */
+.track[data-muted] > :not(.track-head),
+.track[data-muted] .track-head > :not(.mute-btn):not(.btn-quiet),
+.track-controls[data-muted] > :not(.mute-btn) {
+  opacity: 0.45;
+  transition: opacity 160ms ease;
+}
+
+.mute-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.mute-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mute-btn:hover {
+  border-color: var(--ink);
+}
+
+.mute-btn[aria-pressed="true"] {
+  border-color: var(--hammer);
+  background: rgba(229, 72, 77, 0.16);
+  color: #ff8a8e;
+}
+
+.voice-name {
+  font-weight: 700;
+}
+
+.voices-title {
+  margin-top: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* ——— Parties du morceau ——— */
+
+.sections {
+  display: grid;
+  gap: 12px;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+/* À partir de deux parties, chacune a son cadre ; celle qui reçoit les exemples est soulignée. */
+.sections:has(> .section:nth-child(2)) > .section {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(238, 245, 242, 0.035);
+  transition: border-color 160ms ease;
+}
+
+.section[data-selected] {
+  border-color: var(--line-strong) !important;
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.section[data-playing] .section-name::after {
+  content: " · en cours";
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.section-name {
+  flex: 1 1 auto;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.readout-where {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--on-felt-muted);
+}
+
+/* ——— Enregistrement ——— */
+
+.btn-rec .rec-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--hammer);
+}
+
+.btn-rec.is-on {
+  border-color: var(--hammer);
+  background: rgba(229, 72, 77, 0.16);
+}
+
+.btn-rec.is-on .rec-dot {
+  animation: rec-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.25;
+    transform: scale(0.8);
+  }
+}
+
+.rec-time {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.recordings {
+  display: grid;
+  gap: 10px;
+}
+
+.recording {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(238, 245, 242, 0.035);
+}
+
+.recording-name {
+  font-weight: 700;
+}
+
+.recording-name small {
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.recording audio {
+  width: 100%;
+  height: 40px;
 }
 
 .track-head .sel {
@@ -1622,6 +1986,12 @@ textarea.input {
   .option {
     grid-template-columns: 190px minmax(0, 1fr);
     align-items: center;
+  }
+
+  /* Ce qui suit la première ligne d'un réglage (réglage libre de la mesure, petite note) reste dans
+     la colonne des réglages, sous eux, et non dans celle des titres. */
+  .option > :nth-child(n + 3) {
+    grid-column: 2;
   }
 }
 
@@ -2152,8 +2522,18 @@ a.btn-quiet:not(.btn-primary) {
 }
 
 /* Les blocs d'un écran arrivent l'un après l'autre. */
+/* « backwards » et non « both » : une fois jouée, l'animation ne laisse rien derrière elle. Avec « both »,
+   chaque panneau gardait une transformation qui en faisait une couche à part : une liste déroulante
+   ouverte restait prisonnière de son panneau, et le panneau suivant se peignait par-dessus. */
 .view > * {
-  animation: rise 460ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+  animation: rise 460ms cubic-bezier(0.2, 0.75, 0.25, 1) backwards;
+}
+
+/* Pendant l'animation d'entrée, ou si un panneau forme malgré tout une couche à part : celui qui
+   contient une liste ou un menu ouvert passe devant les autres. */
+.view > :has(.sel[data-open], .prog-chord[data-open]) {
+  position: relative;
+  z-index: 20;
 }
 
 .view > *:nth-child(2) {
@@ -2171,7 +2551,7 @@ a.btn-quiet:not(.btn-primary) {
 /* La scène garde en plus la lente dérive de ses halos. */
 .view > .stage {
   animation:
-    rise 460ms cubic-bezier(0.2, 0.75, 0.25, 1) both,
+    rise 460ms cubic-bezier(0.2, 0.75, 0.25, 1) backwards,
     stage-drift 16s ease-in-out infinite alternate;
 }
 

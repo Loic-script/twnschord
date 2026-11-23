@@ -264,9 +264,18 @@ self.addEventListener("message", (event) => {
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE);
   const cached = await cache.match(request);
-  if (cached) return cached;
-  const response = await fetch(request);
-  if (response.ok) cache.put(request, response.clone());
+  let response = cached;
+  if (!response) {
+    response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+  }
+  // Script d'un travailleur (analyse d'un morceau, calcul du générateur) : tous partagent la même
+  // amorce, qui lit dans son adresse (#params=…) quels fichiers charger. Une réponse tirée du cache
+  // porte l'adresse du premier travailleur qui l'a demandée : le second chargerait alors le code du
+  // premier. Une réponse recomposée n'a pas d'adresse propre — chaque travailleur garde la sienne.
+  if (request.destination === "worker") {
+    return new Response(response.body, { status: response.status, statusText: response.statusText, headers: response.headers });
+  }
   return response;
 }
 
