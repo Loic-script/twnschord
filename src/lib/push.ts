@@ -9,7 +9,9 @@ export function pushReady(): boolean {
   if (configured === null) {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
-    const subject = process.env.VAPID_SUBJECT;
+    // Le contact doit être une adresse « mailto: » ou « https: » ; une adresse e-mail seule est complétée.
+    const raw = process.env.VAPID_SUBJECT?.trim();
+    const subject = raw && /^[^\s@:]+@[^\s@]+$/.test(raw) ? `mailto:${raw}` : raw;
     configured = false;
     if (publicKey && privateKey && subject) {
       try {
